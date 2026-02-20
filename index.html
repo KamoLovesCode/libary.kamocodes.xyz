@@ -14,79 +14,59 @@
     <style>
       /* KamoMaterial Theme Framework */
       :root {
-        /* Default to KamoMaterial Dark definition, can be overridden by light mode class */
         --bg-app: #0A0A0A;
         --bg-surface: #151515;
-        --bg-input: #1A1A1A; /* Slightly lighter for inputs */
+        --bg-input: #1A1A1A;
         --bg-pill: #151515;
         --bg-pill-hover: #2A2A2A;
-        
-        --text-main: #FFFFFF;      /* On-Primary */
-        --text-secondary: #AAAAAA; /* On-Surface */
+        --text-main: #FFFFFF;
+        --text-secondary: #AAAAAA;
         --text-inverse: #0A0A0A;
-        
         --text-input: #FFFFFF;
         --input-placeholder: #666666;
-        
-        --border: #2A2A2A; /* Outline */
+        --border: #2A2A2A;
         --border-focus: #444444;
         --divider: #2A2A2A;
-        
-        /* Dynamic Accent - Default Red */
         --accent-color: #FF1F1F;
         --accent-variant: #CC0000;
         --accent-rgb: 255, 31, 31;
-        
-        /* Typography Scale */
         --text-xs: 0.75rem;
         --text-sm: 0.875rem;
         --text-base: 1rem;
         --text-lg: 1.125rem;
         --text-xl: 1.25rem;
         --text-2xl: 1.5rem;
-        
-        /* Spacing Scale */
         --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
-        
-        /* Border Radius - REDUCED for sharper look */
         --radius-sm: 2px; 
         --radius-md: 4px; 
         --radius-lg: 8px; 
         --radius-xl: 12px; 
         --radius-2xl: 16px;
         --radius-pill: 9999px;
-        
-        /* Shadows */
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.2); 
         --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4); 
         --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
         --shadow-floating: 0 10px 30px rgba(0,0,0,0.8);
       }
 
-      /* Light Theme Override */
       [data-theme="light"] {
         --bg-app: #F8FAFC;
         --bg-surface: #FFFFFF;
         --bg-input: #F1F5F9;
         --bg-pill: #FFFFFF;
         --bg-pill-hover: #F1F5F9;
-        
         --text-main: #0F172A;
         --text-secondary: #64748B;
         --text-inverse: #FFFFFF;
-        
         --text-input: #000000;
         --input-placeholder: #94A3B8;
-        
         --border: #E2E8F0;
         --border-focus: #CBD5E1;
         --divider: #F1F5F9;
-        
         --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
         --shadow-floating: 0 10px 30px rgba(0,0,0,0.1);
       }
 
-      /* Background Patterns */
       .bg-pattern-dots {
         background-color: var(--bg-app);
         background-image: radial-gradient(var(--border) 1px, transparent 1px);
@@ -95,7 +75,6 @@
         min-height: 100vh;
       }
 
-      /* Base Styles */
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
         font-family: 'Poppins', sans-serif;
@@ -107,13 +86,6 @@
         transition: background-color 0.3s ease, color 0.3s ease;
       }
 
-      /* Material Icon Adjustments */
-      .material-icons, .material-symbols-outlined {
-        user-select: none;
-        line-height: 1; /* Ensures vertical centering works reliably in flex containers */
-      }
-
-      /* Refined Material Inputs */
       .material-input-group {
         display: flex;
         flex-direction: column;
@@ -127,16 +99,16 @@
         font-weight: 500;
         color: var(--text-secondary);
         margin-bottom: 6px;
-        margin-left: 2px; /* Slight alignment with input padding */
+        margin-left: 2px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
 
       .form-input, .quick-paste-area, input, textarea, select {
         width: 100%;
-        padding: 12px 14px; /* Slightly tighter padding */
-        border-radius: var(--radius-md); /* Reduced radius */
-        border: 1px solid var(--border); /* Subtle border */
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
         background: var(--bg-input);
         color: var(--text-input) !important;
         font-family: inherit;
@@ -151,21 +123,19 @@
         opacity: 0.6;
       }
 
-      /* Material Focus State - Bottom Border Emphasis style or Glow */
       .form-input:focus, .quick-paste-area:focus {
         border-color: var(--accent-color);
         box-shadow: 0 0 0 1px var(--accent-color);
         background: var(--bg-surface);
       }
 
-      /* KamoMaterial Buttons */
       .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: var(--space-2);
         padding: 10px 20px;
-        border-radius: var(--radius-md); /* Sharper */
+        border-radius: var(--radius-md);
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -177,22 +147,16 @@
 
       .btn-primary {
         background: var(--accent-color);
-        color: var(--bg-app); /* Dark text on bright accent */
+        color: var(--bg-app);
         box-shadow: var(--shadow-md);
       }
       .btn-primary:hover {
         background: var(--accent-variant);
-        transform: translateY(-1px); /* Slight lift */
+        transform: translateY(-1px);
         box-shadow: var(--shadow-lg);
       }
       .btn-primary:active {
           transform: translateY(0);
-      }
-      .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
       }
 
       .btn-icon {
@@ -212,7 +176,6 @@
         color: var(--accent-color);
       }
 
-      /* KamoMaterial Cards */
       .page-container {
         width: 100%;
         max-width: 900px;
@@ -223,22 +186,15 @@
         min-height: 100vh;
       }
       
-      @media (max-width: 600px) {
-        .page-container {
-            padding: 20px 16px 100px 16px;
-        }
-      }
-
       .card {
         background: var(--bg-surface);
-        border-radius: var(--radius-lg); /* Sharper */
+        border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--border);
         overflow: hidden;
         transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
       }
       
-      /* Card Hover Effect from Design System */
       .card:hover {
         box-shadow: var(--shadow-md);
         border-color: var(--border-focus);
@@ -252,11 +208,10 @@
 
       @media (min-width: 600px) {
         .card-grid {
-            grid-template-columns: 1fr 1fr; /* Strictly 2 columns as requested */
+            grid-template-columns: 1fr 1fr;
         }
       }
 
-      /* Floating Navbar (Blue Pill Style) */
       .pill-navbar-container {
         position: fixed;
         bottom: 32px;
@@ -272,7 +227,7 @@
       }
 
       .pill-navbar {
-        background: rgba(21, 21, 21, 0.85); /* Glassmorphism surface-dark */
+        background: rgba(21, 21, 21, 0.85);
         backdrop-filter: blur(16px);
         padding: 6px;
         border-radius: var(--radius-pill);
@@ -307,140 +262,25 @@
       .nav-pill-item.active {
         background: rgba(255, 255, 255, 0.05);
         color: var(--accent-color);
-        box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
-      }
-      
-      .nav-pill-item.nav-icon-only {
-          padding: 8px;
-          border-radius: 50%;
       }
 
-      /* Profile Avatar in Navbar */
-      .user-avatar-pill {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      /* Quick Paste Area (Home) */
-      .quick-paste-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        flex-grow: 1;
-      }
-
-      .quick-paste-area {
-        min-height: 200px;
-        resize: none;
-        font-size: 1.1rem;
-        border: 1px solid var(--border);
-        background: var(--bg-surface);
-        transition: all 0.2s;
-        box-shadow: var(--shadow-sm);
-        border-radius: var(--radius-lg);
-      }
-      .quick-paste-area:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 1px var(--accent-color);
-      }
-
-      /* Article View */
-      .article-view {
-        background: var(--bg-surface);
-        border-radius: var(--radius-lg);
-        padding: 40px;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border);
-      }
-
-      /* Notification Popup */
-      .notification-popup {
-          background: var(--bg-surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-lg);
-          padding: 16px;
-          width: 300px;
-          box-shadow: var(--shadow-floating);
-          margin-bottom: 8px;
-      }
-
-      /* Voice Control */
-      .voice-control-bar {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: var(--bg-surface);
-          border-top: 1px solid var(--border);
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          z-index: 90;
-          box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-          transition: transform 0.3s;
-      }
-
-      .mic-button {
-          width: 64px;
-          height: 64px;
-          border-radius: 50%;
-          background: var(--accent-color);
-          color: var(--bg-app);
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
-      }
-      
-      .mic-button:hover {
-          transform: scale(1.05);
-      }
-      
-      .mic-button.listening {
-          background: #EF4444;
-      }
-
-      /* Typography Utilities */
       .text-headline { font-size: var(--text-2xl); font-weight: 700; line-height: 1.2; color: var(--text-main); letter-spacing: -0.02em; }
       .text-title { font-size: var(--text-lg); font-weight: 600; color: var(--text-main); letter-spacing: -0.01em; }
       .text-body { font-size: var(--text-base); color: var(--text-main); }
       .text-caption { font-size: var(--text-sm); color: var(--text-secondary); }
-      .text-accent { color: var(--accent-color); }
       .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-      /* Animations - Simple fades only */
       .animate-fade-in { animation: fadeIn 0.4s ease forwards; }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
       .animate-fade-in-scale { animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      @keyframes fadeInScale { 
-          from { opacity: 0; transform: scale(0.95); } 
-          to { opacity: 1; transform: scale(1); } 
-      }
-
-      /* Markdown Content Styling */
-      .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: var(--text-main); margin-top: 1.5em; margin-bottom: 0.5em; }
-      .markdown-content p { margin-bottom: 1em; line-height: 1.7; color: var(--text-main); }
-      .markdown-content ul, .markdown-content ol { margin-bottom: 1em; padding-left: 1.5em; color: var(--text-main); }
-      .markdown-content code { background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace; color: var(--accent-color); }
-      .markdown-content pre { background: #000; padding: 16px; border-radius: 8px; overflow-x: auto; color: #f8f8f2; margin-bottom: 1.5em; border: 1px solid var(--border); }
-      .markdown-content pre code { background: transparent; color: inherit; padding: 0; }
-      .markdown-content blockquote { border-left: 4px solid var(--accent-color); padding-left: 16px; color: var(--text-secondary); font-style: italic; margin-bottom: 1em; }
-
-      [data-theme="light"] .markdown-content pre { background: #1e1e1e; }
+      @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
   <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    
 <script type="importmap">
 {
   "imports": {
@@ -456,11 +296,6 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-BXPCKphs.js"></script>
-</head>
-  <body>
-    <div id="root"></div>
-    
-
+  <script type="module" src="/index.tsx"></script>
 </body>
 </html>

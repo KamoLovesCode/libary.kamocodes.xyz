@@ -1,0 +1,7 @@
+{
+  "name": "GPT Chat Library",
+  "description": "A neat application to save and organize your outputs from GPT chats into a personal, browsable library. All data is stored locally in your browser.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
