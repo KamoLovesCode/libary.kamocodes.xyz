@@ -95,12 +95,23 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     document.documentElement.style.setProperty('--accent-rgb', colorObj.rgb);
   }, [theme, accentColor]);
 
-  const processNoteWithAI = async (entry: ChatEntry) => {
+    const generateUUID = () => {
+        if (typeof (window as any).crypto !== 'undefined' && typeof (window as any).crypto.randomUUID === 'function') {
+            return (window as any).crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+        });
+    };
+
+    const processNoteWithAI = async (entry: ChatEntry) => {
       try {
           const prompt = `Analyze this note titled "${entry.title}". If vague/incomplete, suggest improvement in 1 sentence. Else return OK.\nContent: ${entry.content.substring(0, 1000)}`;
           const responseText = await api.generateAICompletion(prompt);
           if (responseText && !responseText.includes("OK")) {
-              setNotifications(prev => [{ id: crypto.randomUUID(), text: responseText, entryId: entry.id }, ...prev]);
+              setNotifications(prev => [{ id: generateUUID(), text: responseText, entryId: entry.id }, ...prev]);
           }
       } catch (e) { console.error(e); }
   };
@@ -125,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   const handleQuickSave = async () => {
     if (!quickPasteContent.trim()) return;
     const title = quickPasteContent.split('\n')[0].substring(0, 50) || `Note ${new Date().toLocaleDateString()}`;
-    const tempEntry: ChatEntry = { id: crypto.randomUUID(), title, content: quickPasteContent, timestamp: Date.now() };
+    const tempEntry: ChatEntry = { id: generateUUID(), title, content: quickPasteContent, timestamp: Date.now() };
     try {
         setChatEntries(prev => [tempEntry, ...prev]);
         setQuickPasteContent('');
