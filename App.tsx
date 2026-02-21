@@ -238,26 +238,66 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     );
   };
 
-  const renderHome = () => (
-    <div className="page-container quick-paste-wrapper">
-      <div style={{marginBottom: 'var(--space-4)', textAlign: 'center'}}>
-        <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>Quick Add</h1>
-        <p className="text-body">Instant capture. Cloud persistent via Firebase.</p>
+  const renderHome = () => {
+    const sorted = [...chatEntries].sort((a, b) => b.timestamp - a.timestamp);
+    
+    return (
+      <div className="page-container quick-paste-wrapper">
+        <div style={{marginBottom: 'var(--space-4)', textAlign: 'center'}}>
+          <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>Workspace</h1>
+          <p className="text-body">Capture and organize your notes locally.</p>
+        </div>
+        
+        <div style={{position: 'relative', width: '100%', marginBottom: '2rem'}}>
+            <textarea 
+                className="quick-paste-area" 
+                placeholder="Type or paste your notes here..." 
+                value={quickPasteContent} 
+                onChange={(e) => setQuickPasteContent(e.target.value)} 
+                onKeyDown={handleKeyDown} 
+                style={{ minHeight: '120px', paddingBottom: '60px' }}
+            />
+            <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '8px' }}>
+                <button onClick={handleSummarize} className="btn-icon" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--accent-color)' }}>
+                    <Icon name={isSummarizing ? "autorenew" : "analytics"} style={{ fontSize: '18px' }} />
+                </button>
+                <button onClick={handleQuickSave} className="btn btn-primary" style={{ padding: '8px 16px', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem' }} disabled={!quickPasteContent.trim()}>
+                    Save Note
+                </button>
+            </div>
+        </div>
+
+        <div style={{ width: '100%' }}>
+            <h2 className="text-title" style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Recent Notes</h2>
+            {sorted.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
+                    <Icon name="note" style={{ fontSize: '3rem', marginBottom: '1rem' }} />
+                    <p>No notes yet. Start typing above to create one.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {sorted.slice(0, 5).map(entry => (
+                        <div key={entry.id} className="card" onClick={() => handleSelectEntry(entry)} style={{cursor: 'pointer', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <h3 className="text-title truncate" style={{ fontSize: '1rem', margin: 0 }}>{entry.title}</h3>
+                                <span className="text-caption" style={{ fontSize: '0.75rem' }}>{new Date(entry.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-body" style={{ fontSize: '0.85rem', opacity: 0.7, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
+                                {entry.content}
+                            </p>
+                        </div>
+                    ))}
+                    {sorted.length > 5 && (
+                        <button onClick={() => handleNav('LIBRARY')} className="btn" style={{ background: 'transparent', border: '1px solid var(--border)', width: '100%', marginTop: '8px' }}>
+                            View All in Library
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
       </div>
-      <div style={{position: 'relative', width: '100%', flexGrow: 1}}>
-          <textarea className="quick-paste-area" placeholder="Paste GPT outputs here... (Enter to save)" value={quickPasteContent} onChange={(e) => setQuickPasteContent(e.target.value)} onKeyDown={handleKeyDown} />
-          <button onClick={handleSummarize} className="btn-icon" style={{ position: 'absolute', bottom: '20px', right: '80px', background: 'var(--bg-surface)', border: '1px solid var(--border)', width: '48px', height: '48px', borderRadius: '50%', color: 'var(--accent-color)' }}>
-              <Icon name={isSummarizing ? "autorenew" : "analytics"} />
-          </button>
-          <button onClick={handleDictation} className={`btn-icon ${isDictating ? 'listening' : ''}`} style={{ position: 'absolute', bottom: '20px', right: '20px', background: isDictating ? '#EF4444' : 'var(--accent-color)', color: 'var(--bg-app)', width: '48px', height: '48px', borderRadius: '50%' }}>
-              <Icon name="mic" />
-          </button>
-      </div>
-      <div style={{textAlign: 'center', marginTop: 'var(--space-4)', opacity: 0.6}} className="text-caption">
-        <Icon name="cloud" style={{verticalAlign: 'middle', marginRight: 4, fontSize: '16px'}}/> Firebase Permanent Storage
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderLibrary = () => {
     const sorted = [...chatEntries].sort((a, b) => {
