@@ -1,6 +1,6 @@
 import React from 'react';
 
-type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud';
+type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud' | 'image' | 'event' | 'delete' | 'checkCircle' | 'radioButtonUnchecked' | 'list';
 
 interface IconProps extends React.HTMLAttributes<HTMLSpanElement> {
   name: IconName;
@@ -13,6 +13,7 @@ const iconMap: Record<IconName, string> = {
   bookOpen: 'menu_book',
   library: 'library_books',
   trash: 'delete',
+  delete: 'delete',
   x: 'close',
   externalLink: 'open_in_new',
   chevronDown: 'expand_more',
@@ -44,7 +45,12 @@ const iconMap: Record<IconName, string> = {
   sun: 'light_mode',
   moon: 'dark_mode',
   cloudOff: 'cloud_off',
-  cloud: 'cloud_done'
+  cloud: 'cloud_done',
+  image: 'image',
+  event: 'event',
+  checkCircle: 'check_circle',
+  radioButtonUnchecked: 'radio_button_unchecked',
+  list: 'list'
 };
 
 const Icon: React.FC<IconProps> = ({ name, className = '', ...props }) => {

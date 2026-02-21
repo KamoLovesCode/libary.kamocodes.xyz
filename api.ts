@@ -65,6 +65,9 @@ class HttpApiService {
             title: entry.title,
             content: entry.content,
             timestamp: Date.now(),
+            dueDate: entry.dueDate,
+            priority: entry.priority,
+            steps: entry.steps,
         };
         const response = await fetch(`${this.baseUrl}/api/entries`, {
             method: 'POST',
@@ -86,6 +89,9 @@ class HttpApiService {
             title: entry.title,
             content: entry.content,
             timestamp: entry.timestamp,
+            dueDate: entry.dueDate,
+            priority: entry.priority,
+            steps: entry.steps,
         };
         const response = await fetch(`${this.baseUrl}/api/entries/${entry.id}`, {
             method: 'PUT',

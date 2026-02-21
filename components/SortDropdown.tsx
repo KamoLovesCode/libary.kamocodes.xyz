@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Icon from './Icon';
 
-export type SortOption = 'newest' | 'oldest' | 'title';
+export type SortOption = 'newest' | 'oldest' | 'title' | 'dueDate' | 'dueDateDesc';
 
 interface SortDropdownProps {
   sortOrder: SortOption;
@@ -9,8 +9,10 @@ interface SortDropdownProps {
 }
 
 const sortOptions: { key: SortOption; label: string }[] = [
-  { key: 'newest', label: 'Date: Newest First' },
-  { key: 'oldest', label: 'Date: Oldest First' },
+  { key: 'newest', label: 'Date Added: Newest' },
+  { key: 'oldest', label: 'Date Added: Oldest' },
+  { key: 'dueDate', label: 'Due Date: Soonest' },
+  { key: 'dueDateDesc', label: 'Due Date: Latest' },
   { key: 'title', label: 'Title: A-Z' },
 ];
 
