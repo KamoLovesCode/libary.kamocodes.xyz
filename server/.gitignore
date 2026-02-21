@@ -1,0 +1,19 @@
+# Environment variables
+.env
+
+# Data directory (JSON fallback storage)
+data/
+
+# Uploads directory
+uploads/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -142,24 +142,44 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        border: none;
+        border: 1px solid var(--border);
         font-family: inherit;
         font-size: 0.9rem;
         letter-spacing: 0.01em;
+        background: var(--bg-surface);
+        color: var(--text-main);
+      }
+      
+      .btn:hover {
+        background: var(--bg-pill-hover);
+        border-color: var(--border-focus);
+        transform: translateY(-1px);
+      }
+      
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .btn-primary {
         background: var(--accent-color);
-        color: var(--bg-app);
+        color: #FFFFFF;
+        border-color: var(--accent-color);
         box-shadow: var(--shadow-md);
       }
       .btn-primary:hover {
         background: var(--accent-variant);
+        border-color: var(--accent-variant);
         transform: translateY(-1px);
         box-shadow: var(--shadow-lg);
       }
       .btn-primary:active {
           transform: translateY(0);
+      }
+      .btn-primary:disabled {
+        opacity: 0.6;
+        transform: none;
       }
 
       .btn-icon {
@@ -212,6 +232,12 @@
       @media (min-width: 600px) {
         .card-grid {
             grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .card-grid {
+            grid-template-columns: repeat(3, 1fr);
         }
       }
 
@@ -278,6 +304,95 @@
 
       .animate-fade-in-scale { animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+      
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+        animation: fadeIn 0.2s ease;
+      }
+      
+      .modal-content {
+        background: var(--bg-surface);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-floating);
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      
+      .modal-header {
+        padding: 24px 24px 16px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      
+      .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      
+      .modal-footer {
+        padding: 16px 24px 24px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+      
+      /* Better form visibility */
+      .form-input:-webkit-autofill,
+      .form-input:-webkit-autofill:hover,
+      .form-input:-webkit-autofill:focus {
+        -webkit-text-fill-color: var(--text-input);
+        -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+        transition: background-color 5000s ease-in-out 0s;
+      }
+      
+      /* Improve button contrast */
+      .btn:not(.btn-primary):not(.btn-icon) {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .btn:not(.btn-primary):not(.btn-icon):hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: var(--text-main);
+      }
+      
+      /* Notification popup */
+      .notification-popup {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 16px;
+        min-width: 280px;
+        max-width: 400px;
+        box-shadow: var(--shadow-floating);
+        animation: fadeInScale 0.2s ease;
+      }
     </style>
   <link rel="stylesheet" href="/index.css">
 </head>

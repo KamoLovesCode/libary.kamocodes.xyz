@@ -49,33 +49,15 @@ const Modal: React.FC<ModalProps> = ({
   const showSummaryView = summarizedContent !== null && summarizedContent !== undefined;
 
   return (
-    <div
-      style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100,
-          transition: 'opacity 0.3s ease', padding: 'var(--space-4)'
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="card animate-fade-in-scale"
-        style={{
-            width: '100%', maxWidth: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-            animationFillMode: 'forwards'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <h2 className="text-title text-accent truncate">{title}</h2>
-          <button
-            onClick={onClose}
-            className="btn-icon"
-          >
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '900px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="text-headline">{title}</h2>
+          <button onClick={onClose} className="btn-icon" aria-label="Close modal">
             <Icon name="x" />
           </button>
         </div>
-        <div className="card-body" style={{ overflowY: 'auto', flex: '1 1 auto' }}>
-            {showSummaryView ? (
+        <div className="modal-body">{showSummaryView ? (
               <div>
                 <h3 className="text-title" style={{marginBottom: 'var(--space-4)'}}>AI Generated Summary</h3>
                 <div className="markdown-content">
@@ -103,8 +85,8 @@ const Modal: React.FC<ModalProps> = ({
                   </ReactMarkdown>
                 </div>
                 
-                <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
-                  <button onClick={onCancelSummary} className="btn-icon" aria-label="Cancel summary">
+                <div className="modal-footer" style={{ marginTop: 'var(--space-4)' }}>
+                  <button onClick={onCancelSummary} className="btn" aria-label="Cancel summary">
                     <span>Cancel</span>
                   </button>
                   <button onClick={onApplySummary} className="btn btn-primary" aria-label="Apply summary">

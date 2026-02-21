@@ -45,10 +45,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={() => onThemeChange('light')}
                 className={`btn ${theme === 'light' ? 'btn-primary' : ''}`}
                 style={{
-                    flex: 1, 
-                    border: '1px solid var(--border)', 
-                    background: theme === 'light' ? 'var(--accent-color)' : 'var(--bg-surface)', 
-                    color: theme === 'light' ? 'white' : 'var(--text-main)',
+                    flex: 1,
                     boxShadow: theme === 'light' ? 'var(--shadow-md)' : 'none'
                 }}
             >
@@ -58,10 +55,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={() => onThemeChange('dark')}
                 className={`btn ${theme === 'dark' ? 'btn-primary' : ''}`}
                 style={{
-                    flex: 1, 
-                    border: '1px solid var(--border)', 
-                    background: theme === 'dark' ? 'var(--accent-color)' : 'var(--bg-surface)', 
-                    color: theme === 'dark' ? 'white' : 'var(--text-main)',
+                    flex: 1,
                     boxShadow: theme === 'dark' ? 'var(--shadow-md)' : 'none'
                 }}
             >

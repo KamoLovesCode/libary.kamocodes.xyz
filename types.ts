@@ -5,6 +5,8 @@ export interface ChatEntry {
   title: string;
   content: string;
   timestamp: number;
+  dueDate?: string; // ISO date string (optional)
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface User {

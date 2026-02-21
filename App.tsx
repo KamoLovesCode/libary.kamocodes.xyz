@@ -49,6 +49,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   const [quickPasteContent, setQuickPasteContent] = useState('');
   const [isDictating, setIsDictating] = useState(false);
   
+  // Create Note Modal State
+  const [isCreateNoteModalOpen, setIsCreateNoteModalOpen] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteDueDate, setNewNoteDueDate] = useState('');
+  const [newNotePriority, setNewNotePriority] = useState<'low' | 'medium' | 'high'>('medium');
+  
   // Summarization & AI Edit State
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryContent, setSummaryContent] = useState<string | null>(null);
@@ -145,6 +152,30 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
         processNoteWithAI(savedEntry);
     } catch (err) { alert("Cloud sync issue. Check connection."); }
   };
+  
+  const handleCreateNote = async () => {
+    if (!newNoteContent.trim()) return;
+    const title = newNoteTitle.trim() || newNoteContent.split('\n')[0].substring(0, 50) || `Note ${new Date().toLocaleDateString()}`;
+    const tempEntry: ChatEntry = { 
+      id: generateUUID(), 
+      title, 
+      content: newNoteContent, 
+      timestamp: Date.now(),
+      dueDate: newNoteDueDate || undefined,
+      priority: newNotePriority
+    };
+    try {
+        setChatEntries(prev => [tempEntry, ...prev]);
+        setNewNoteTitle('');
+        setNewNoteContent('');
+        setNewNoteDueDate('');
+        setNewNotePriority('medium');
+        setIsCreateNoteModalOpen(false);
+        const savedEntry = await api.createEntry(currentUser.username, tempEntry);
+        setChatEntries(prev => prev.map(e => e.id === tempEntry.id ? savedEntry : e));
+        processNoteWithAI(savedEntry);
+    } catch (err) { alert("Cloud sync issue. Check connection."); }
+  };
 
   const handleUpdateEntry = async () => {
       if (!selectedEntry || !editedContent.trim()) return;
@@ -211,25 +242,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     if (currentView === 'ARTICLE') return null; 
     return (
       <div className="pill-navbar-container">
-        {showNotifications && (
-            <div className="notification-popup">
-                <h4 className="text-title" style={{fontSize: '0.9rem', marginBottom: '8px', display: 'flex', justifyContent: 'space-between'}}>
-                    AI Suggestions
-                    <button onClick={() => setShowNotifications(false)} className="btn-icon"><Icon name="x" style={{fontSize: '16px'}}/></button>
-                </h4>
-                {notifications.length === 0 ? (
-                    <p className="text-caption">No new suggestions.</p>
-                ) : (
-                    <ul style={{listStyle: 'none', maxHeight: '200px', overflowY: 'auto'}}>
-                        {notifications.map(notif => (
-                            <li key={notif.id} style={{marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid var(--border)'}}>
-                                <p className="text-body" style={{fontSize: '0.8rem'}}>{notif.text}</p>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        )}
         <nav className="pill-navbar">
           <button className={`nav-pill-item ${currentView === 'HOME' ? 'active' : ''}`} onClick={() => handleNav('HOME')}>
             <Icon name="home" /> Home
@@ -240,6 +252,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
           <div style={{width: 1, height: '24px', background: 'var(--border)', margin: '0 4px'}}></div>
           <button className={`nav-pill-item nav-icon-only ${showNotifications ? 'active' : ''}`} onClick={() => setShowNotifications(!showNotifications)}>
              <Icon name={notifications.length > 0 ? "notificationsActive" : "notifications"} />
+          </button>
+          <button className="nav-pill-item nav-icon-only" onClick={() => setIsCreateNoteModalOpen(true)} style={{background: 'var(--accent-color)', color: '#fff'}} title="Create detailed note">
+             <Icon name="add" />
           </button>
           <button className={`nav-pill-item nav-icon-only ${currentView === 'PROFILE' ? 'active' : ''}`} onClick={() => handleNav('PROFILE')}>
              <div className="user-avatar-pill"><Icon name="person" style={{fontSize: '20px'}}/></div>
@@ -255,8 +270,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     return (
       <div className="page-container quick-paste-wrapper">
         <div style={{marginBottom: 'var(--space-4)', textAlign: 'center'}}>
-          <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>Workspace</h1>
-          <p className="text-body">Capture and organize your notes locally.</p>
+          <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>Quick Capture</h1>
+          <p className="text-body">Quickly jot down notes. Use the <Icon name="add" style={{fontSize: '0.9rem', verticalAlign: 'middle'}} /> button in the navbar for detailed notes.</p>
         </div>
         
         <div style={{position: 'relative', width: '100%', marginBottom: '2rem'}}>
@@ -273,7 +288,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
                     <Icon name={isSummarizing ? "autorenew" : "analytics"} style={{ fontSize: '18px' }} />
                 </button>
                 <button onClick={handleQuickSave} className="btn btn-primary" style={{ padding: '8px 16px', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem' }} disabled={!quickPasteContent.trim()}>
-                    Save Note
+                    Quick Save
                 </button>
             </div>
         </div>
@@ -282,7 +297,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
             <h2 className="text-title" style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Recent Notes</h2>
             {sorted.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
-                    <Icon name="note" style={{ fontSize: '3rem', marginBottom: '1rem' }} />
+                    <Icon name="bookOpen" style={{ fontSize: '3rem', marginBottom: '1rem' }} />
                     <p>No notes yet. Start typing above to create one.</p>
                 </div>
             ) : (
@@ -329,8 +344,31 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
         {sorted.map(entry => (
           <div key={entry.id} className="card" onClick={() => handleSelectEntry(entry)} style={{cursor: 'pointer'}}>
             <div className="card-body" style={{padding: '20px'}}>
-                <h3 className="text-title truncate">{entry.title}</h3>
-                <p className="text-caption">{new Date(entry.timestamp).toLocaleDateString()}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <h3 className="text-title truncate" style={{ flex: 1 }}>{entry.title}</h3>
+                    {entry.priority && entry.priority !== 'medium' && (
+                        <span style={{ 
+                            fontSize: '0.7rem', 
+                            padding: '2px 8px', 
+                            borderRadius: '4px', 
+                            background: entry.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                            color: entry.priority === 'high' ? '#EF4444' : '#3B82F6',
+                            marginLeft: '8px',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {entry.priority}
+                        </span>
+                    )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <p className="text-caption">{new Date(entry.timestamp).toLocaleDateString()}</p>
+                    {entry.dueDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Icon name="history" style={{ fontSize: '14px', color: 'var(--accent-color)' }} />
+                            <span className="text-caption">Due: {new Date(entry.dueDate).toLocaleDateString()}</span>
+                        </div>
+                    )}
+                </div>
                 <p className="text-body" style={{ fontSize: '0.9rem', opacity: 0.7, WebkitLineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{entry.content}</p>
             </div>
             <div className="card-footer" style={{padding: '0 20px 20px', display: 'flex', justifyContent: 'flex-end'}}>
@@ -396,19 +434,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
                 <button onClick={() => isEditing ? handleUpdateEntry() : setIsEditing(true)} className="btn btn-primary"><Icon name={isEditing ? "check" : "settings"} /> {isEditing ? 'Save' : 'Edit'}</button>
              </div>
         </div>
-        {showAiEditInput && (
-            <div className="card animate-fade-in" style={{marginBottom: '20px', padding: '16px', border: '1px solid var(--accent-color)'}}>
-                <input type="text" placeholder="e.g. 'Fix grammar', 'Make it shorter'" className="form-input" value={aiEditPrompt} onChange={(e) => setAiEditPrompt(e.target.value)} />
-                <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px'}}>
-                    <button onClick={() => setShowAiEditInput(false)} className="btn-icon">Cancel</button>
-                    <button onClick={handleAIEdit} disabled={isAIEditing} className="btn btn-primary">{isAIEditing ? '...' : 'Apply'}</button>
-                </div>
-            </div>
-        )}
         <article className="card" style={{padding: '40px'}}>
            <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>{selectedEntry.title}</h1>
            <p className="text-caption" style={{marginBottom: '30px'}}>{new Date(selectedEntry.timestamp).toLocaleString()}</p>
-           {isEditing ? <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="quick-paste-area" style={{minHeight: '400px'}} /> : (
+           {isEditing ? <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="quick-paste-area edit-textarea" aria-label="Edit note content" /> : (
                <div className="markdown-content">
                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]} components={{ pre: CodeBlock }}>{selectedEntry.content}</ReactMarkdown>
                </div>
@@ -435,6 +464,128 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
             {currentView === 'ARTICLE' && renderArticle()}
         </div>
         {renderNavbar()}
+        
+        {showNotifications && (
+            <div className="modal-overlay" onClick={() => setShowNotifications(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '500px', maxHeight: '80vh'}}>
+                    <div className="modal-header">
+                        <h2 className="text-headline">AI Suggestions</h2>
+                        <button onClick={() => setShowNotifications(false)} className="btn-icon"><Icon name="x" /></button>
+                    </div>
+                    <div className="modal-body" style={{maxHeight: '60vh', overflowY: 'auto'}}>
+                        {notifications.length === 0 ? (
+                            <p className="text-body" style={{textAlign: 'center', padding: '2rem', opacity: 0.6}}>No new suggestions.</p>
+                        ) : (
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                                {notifications.map(notif => (
+                                    <div key={notif.id} className="card" style={{padding: '16px'}}>
+                                        <p className="text-body">{notif.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+        
+        {showAiEditInput && (
+            <div className="modal-overlay" onClick={() => setShowAiEditInput(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '500px'}}>
+                    <div className="modal-header">
+                        <h2 className="text-headline">AI Magic Edit</h2>
+                        <button onClick={() => setShowAiEditInput(false)} className="btn-icon"><Icon name="x" /></button>
+                    </div>
+                    <div className="modal-body">
+                        <p className="text-body" style={{marginBottom: '1rem', opacity: 0.8}}>Tell AI how to transform your content:</p>
+                        <input 
+                            type="text" 
+                            placeholder="e.g. 'Fix grammar', 'Make it shorter', 'Add more details'" 
+                            className="form-input" 
+                            value={aiEditPrompt} 
+                            onChange={(e) => setAiEditPrompt(e.target.value)}
+                            autoFocus
+                            onKeyDown={(e) => e.key === 'Enter' && !isAIEditing && aiEditPrompt.trim() && handleAIEdit()}
+                        />
+                    </div>
+                    <div className="modal-footer">
+                        <button onClick={() => setShowAiEditInput(false)} className="btn">Cancel</button>
+                        <button onClick={handleAIEdit} disabled={isAIEditing || !aiEditPrompt.trim()} className="btn btn-primary">
+                            {isAIEditing ? 'Processing...' : 'Apply AI Edit'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        
+        {/* Create Note Modal */}
+        {isCreateNoteModalOpen && (
+            <div className="modal-overlay" onClick={() => setIsCreateNoteModalOpen(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+                    <div className="modal-header">
+                        <h2 className="text-headline">Create Note</h2>
+                        <button onClick={() => setIsCreateNoteModalOpen(false)} className="btn-icon"><Icon name="x" /></button>
+                    </div>
+                    <div className="modal-body">
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                            <div className="material-input-group" style={{marginBottom: 0}}>
+                                <label className="form-label">Title</label>
+                                <input 
+                                    type="text"
+                                    className="form-input" 
+                                    placeholder="Enter note title..." 
+                                    value={newNoteTitle} 
+                                    onChange={(e) => setNewNoteTitle(e.target.value)}
+                                />
+                            </div>
+                            
+                            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                                <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 200px'}}>
+                                    <label className="form-label">Due Date (Optional)</label>
+                                    <input 
+                                        type="date"
+                                        className="form-input" 
+                                        value={newNoteDueDate} 
+                                        onChange={(e) => setNewNoteDueDate(e.target.value)}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+                                <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 150px'}}>
+                                    <label className="form-label">Priority</label>
+                                    <select 
+                                        className="form-input" 
+                                        value={newNotePriority} 
+                                        onChange={(e) => setNewNotePriority(e.target.value as 'low' | 'medium' | 'high')}
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div className="material-input-group" style={{marginBottom: 0}}>
+                                <label className="form-label">Content</label>
+                                <textarea 
+                                    className="form-input" 
+                                    placeholder="Enter your note content..." 
+                                    value={newNoteContent} 
+                                    onChange={(e) => setNewNoteContent(e.target.value)} 
+                                    style={{ minHeight: '200px', resize: 'vertical', fontFamily: 'inherit' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button onClick={() => setIsCreateNoteModalOpen(false)} className="btn">Cancel</button>
+                        <button onClick={handleCreateNote} disabled={!newNoteContent.trim()} className="btn btn-primary">
+                            <Icon name="check" /> Save Note
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        
         <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentAccentColorName={accentColor} onAccentColorChange={(c) => setAccentColor(c.name)} theme={theme} onThemeChange={setTheme} />
         <Modal isOpen={isSummaryModalOpen} onClose={() => setIsSummaryModalOpen(false)} title="Summary" originalContent={quickPasteContent} summarizedContent={summaryContent} isSummarizing={isSummarizing} onApplySummary={handleApplySummary} onCancelSummary={() => setIsSummaryModalOpen(false)}><p>Loading...</p></Modal>
     </div>
@@ -443,9 +594,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const handleAuth = async (username: string) => {
+  const handleAuth = async (username: string, password: string, isSignup: boolean) => {
       try {
-          const user = await api.auth(username);
+          const user = await api.auth(username, password, isSignup);
           setCurrentUser(user);
           return { success: true };
       } catch (e: any) { return { success: false, message: e.message }; }
