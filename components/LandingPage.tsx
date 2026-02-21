@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface LandingPageProps {
   onAuth: (username: string, password: string, isSignup: boolean) => Promise<{ success: boolean; message?: string }>;
@@ -57,49 +58,69 @@ const LandingPage: React.FC<LandingPageProps> = ({ onAuth }) => {
         background: 'radial-gradient(circle at 50% 50%, rgba(232,255,87,0.03) 0%, transparent 70%)',
       }} />
 
-      {/* Main container */}
-      <div style={{
+      {/* Main container - two-column on desktop */}
+      <div className="landing-outer" style={{
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: '880px',
         position: 'relative',
         zIndex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '48px',
       }}>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        {/* Brand / icon column (left on desktop, top on mobile) */}
+        <div className="landing-brand" style={{
+          flex: '1',
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+        }}>
           <div style={{
-            width: '56px',
-            height: '56px',
+            width: '72px',
+            height: '72px',
             background: 'linear-gradient(135deg, #e8ff57 0%, #b8d13d 100%)',
-            borderRadius: '16px',
+            borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.75rem',
-            margin: '0 auto 24px',
-            boxShadow: '0 8px 24px rgba(232,255,87,0.2)',
+            marginBottom: '28px',
+            boxShadow: '0 8px 32px rgba(232,255,87,0.25)',
           }}>
-            📚
+            <Icon
+              name="library"
+              style={{
+                fontSize: '2rem',
+                color: '#0a0a0b',
+                fontVariationSettings: "'FILL' 1",
+              }}
+            />
           </div>
           <h1 style={{
-            fontSize: '2rem',
+            fontSize: '2.25rem',
             fontWeight: 700,
             color: '#ffffff',
             letterSpacing: '-0.02em',
-            margin: '0 0 8px 0',
+            margin: '0 0 12px 0',
+            lineHeight: 1.15,
           }}>
             {isSignup ? 'Create Account' : 'Welcome Back'}
           </h1>
           <p style={{
-            fontSize: '0.95rem',
+            fontSize: '1rem',
             color: '#888',
             margin: 0,
+            lineHeight: 1.6,
+            maxWidth: '280px',
           }}>
             {isSignup ? 'Start organizing your goals today' : 'Sign in to continue to your workspace'}
           </p>
         </div>
 
-        {/* Form card */}
+        {/* Form card column (right on desktop, bottom on mobile) */}
+        <div className="landing-form" style={{ flex: '1', minWidth: 0 }}>
         <div style={{
           background: 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(255,255,255,0.08)',
@@ -363,7 +384,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onAuth }) => {
             </button>
           </p>
         </div>
-      </div>
+
+        </div>{/* end landing-form */}
+      </div>{/* end landing-outer */}
 
       {/* Error Modal */}
       {errorModal.show && (
@@ -453,6 +476,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onAuth }) => {
         input:-webkit-autofill {
           -webkit-box-shadow: 0 0 0 100px rgba(255,255,255,0.05) inset !important;
           -webkit-text-fill-color: #fff !important;
+        }
+
+        /* Desktop: side-by-side */
+        .landing-outer {
+          flex-direction: row;
+        }
+        .landing-brand {
+          align-items: flex-start;
+          text-align: left;
+        }
+        .landing-brand p {
+          text-align: left;
+        }
+
+        /* Mobile: stacked */
+        @media (max-width: 640px) {
+          .landing-outer {
+            flex-direction: column;
+            max-width: 420px !important;
+            gap: 32px !important;
+          }
+          .landing-brand {
+            align-items: center !important;
+            text-align: center !important;
+          }
+          .landing-brand p {
+            text-align: center !important;
+          }
+          .landing-form {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

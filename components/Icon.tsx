@@ -1,6 +1,6 @@
 import React from 'react';
 
-type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud' | 'image' | 'event' | 'delete' | 'checkCircle' | 'radioButtonUnchecked' | 'list';
+type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud' | 'image' | 'event' | 'delete' | 'checkCircle' | 'radioButtonUnchecked' | 'list' | 'notes' | 'autoAwesome' | 'lightbulb';
 
 interface IconProps extends React.HTMLAttributes<HTMLSpanElement> {
   name: IconName;
@@ -50,7 +50,10 @@ const iconMap: Record<IconName, string> = {
   event: 'event',
   checkCircle: 'check_circle',
   radioButtonUnchecked: 'radio_button_unchecked',
-  list: 'list'
+  list: 'list',
+  notes: 'notes',
+  autoAwesome: 'auto_awesome',
+  lightbulb: 'lightbulb'
 };
 
 const Icon: React.FC<IconProps> = ({ name, className = '', ...props }) => {

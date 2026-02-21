@@ -76,7 +76,7 @@ const EditPage: React.FC<EditPageProps> = ({
   };
 
   return (
-    <div style={{ paddingBottom: '100px' }}>
+    <div style={{ paddingBottom: '100px', maxWidth: '680px', margin: '0 auto', padding: '20px 16px 100px' }}>
       {/* Navigation */}
       <div style={{
         display: 'flex',
@@ -102,8 +102,14 @@ const EditPage: React.FC<EditPageProps> = ({
             fontSize: '0.85rem',
             fontWeight: 500,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface)', (e.currentTarget as HTMLElement).style.color = 'var(--text-main)'}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'none', (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-main)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'none';
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+          }}
         >
           <Icon name="arrowBack" style={{ fontSize: '18px' }} /> Back
         </button>
@@ -500,7 +506,7 @@ const EditPage: React.FC<EditPageProps> = ({
                       (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
                     }}
                   >
-                    <Icon name="close" style={{ fontSize: '16px' }} />
+                    <Icon name="x" style={{ fontSize: '16px' }} />
                   </button>
                 </div>
               ))}

@@ -12,7 +12,9 @@ import SettingsModal, { ACCENT_COLORS } from './components/SettingsModal';
 import Modal from './components/Modal';
 import SortDropdown, { SortOption } from './components/SortDropdown';
 import ChatCard from './components/ChatCard';
+import EditPage from './components/EditPage';
 import { api } from './api';
+import { modelOrchestrator, OrchestratedResponse } from './services/modelOrchestrator';
 
 
 type ViewState = 'HOME' | 'LIBRARY' | 'PROFILE' | 'ARTICLE';
@@ -166,85 +168,37 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   };
 
   const enhanceTextWithAI = async (text: string, setLoading: (val: boolean) => void, updateText: (text: string) => void) => {
-      if (!text.trim()) return;
-      setLoading(true);
+    if (!text.trim()) return;
+    setLoading(true);
+    
+    try {
+      // Determine task type based on context
+      const taskType = text.length < 100 ? 'elaborate' : 'enhance';
       
-      try {
-          const HF_TOKEN = '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';
-          const prompt = `Enhance and improve the following note by making it clearer, more detailed, and better structured. Maintain the original intent but make it more professional and comprehensive:\n\n${text}`;
-          
-          const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                  Authorization: `Bearer ${HF_TOKEN}`,
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-                  messages: [{ role: 'user', content: prompt }],
-                  stream: true,
-              }),
-          });
-
-          if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`API Error: ${response.status} - ${errorText}`);
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error('Response body is not readable');
-
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let enhancedText = '';
-
-          try {
-              while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-
-                  buffer += decoder.decode(value, { stream: true });
-
-                  while (true) {
-                      const lineEnd = buffer.indexOf('\n');
-                      if (lineEnd === -1) break;
-
-                      const line = buffer.slice(0, lineEnd).trim();
-                      buffer = buffer.slice(lineEnd + 1);
-
-                      if (line.startsWith('data: ')) {
-                          const data = line.slice(6);
-                          if (data === '[DONE]') break;
-
-                          try {
-                              const parsed = JSON.parse(data);
-                              const content = parsed.choices[0]?.delta?.content;
-                              if (content) {
-                                  enhancedText += content;
-                                  updateText(enhancedText);
-                              }
-                          } catch (e) {
-                              // Ignore invalid JSON
-                          }
-                      }
-                  }
-              }
-              
-              // Ensure final text is set
-              if (enhancedText.trim()) {
-                  updateText(enhancedText);
-              } else {
-                  throw new Error('No content received from AI');
-              }
-          } finally {
-              reader.cancel();
-          }
-      } catch (error) {
-          console.error('Enhancement failed:', error);
-          setAlertModal({show: true, title: 'Enhancement Failed', message: `${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`, type: 'error'});
-      } finally {
-          setLoading(false);
+      const response = await modelOrchestrator.getBestResponse(
+        `Enhance this content to be clearer and more detailed: "${text}"`,
+        { taskType }
+      );
+      
+      if (response.finalContent.trim()) {
+        updateText(response.finalContent);
+        
+        // Show a subtle notification about which models were used
+        console.log(`AI Enhancement used: ${response.usedModels.join(', ')} (confidence: ${response.confidence}%)`);
+      } else {
+        throw new Error('No content received');
       }
+    } catch (error) {
+      console.error('Enhancement failed:', error);
+      setAlertModal({
+        show: true, 
+        title: 'Enhancement Failed', 
+        message: `${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`, 
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEnhanceWithAI = async () => {
@@ -305,88 +259,72 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   };
 
   const handleElaborateGoal = async () => {
-      if (!selectedEntry || !elaborationInput.trim()) return;
-      setIsElaborating(true);
-      try {
-          const HF_TOKEN = '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';
-          
-          // Build the goal structure for the AI
-          const goalStructure = `
-Goal Structure:
-- Title: ${selectedEntry.title}
-- Due Date: ${selectedEntry.dueDate ? new Date(selectedEntry.dueDate).toLocaleDateString() : 'Not set'}
-- Priority: ${selectedEntry.priority || 'medium'}
-- Current Description: ${selectedEntry.content}
-- Action Steps: ${selectedEntry.steps && selectedEntry.steps.length > 0 ? selectedEntry.steps.map(s => `\n  ${s.completed ? '✓' : '○'} ${s.text}`).join('') : 'None yet'}
+    if (!selectedEntry || !elaborationInput.trim()) return;
+    setIsElaborating(true);
+    try {
+      const response = await modelOrchestrator.getBestResponse(
+        `Based on this goal and the user's elaboration, provide a refined, detailed description:
 
-User's Additional Context:
-"${elaborationInput}"
+Goal Title: "${selectedEntry.title}"
+Current Description: ${selectedEntry.content}
+User's Additional Context: "${elaborationInput}"
 
-Based on this complete goal structure and the user's elaboration above, please:
-1. Refine and enhance the goal description to be clearer and more actionable
-2. Ensure the description incorporates the user's additional context
-3. Keep it focused and practical (2-3 paragraphs max)
-4. Make it specific enough to guide action steps
+Provide a refined description that incorporates all this information.`,
+        { goal: selectedEntry.title, taskType: 'elaborate' }
+      );
 
-Return only the refined description, nothing else.`;
-
-          const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                  Authorization: `Bearer ${HF_TOKEN}`,
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-                  messages: [{ role: 'user', content: goalStructure }],
-                  stream: false,
-              }),
-          });
-          
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
-          
-          const data = await response.json();
-          const refinedContent = data.choices[0]?.message?.content || '';
-          
-          if (refinedContent.trim()) {
-              // Update the entry with refined content
-              const updatedEntry = {
-                  ...selectedEntry,
-                  content: refinedContent
-              };
-              setChatEntries(prev => prev.map(e => e.id === selectedEntry.id ? updatedEntry : e));
-              setSelectedEntry(updatedEntry);
-              setEditedContent(refinedContent);
-              
-              // Update backend
-              await api.updateEntry(currentUser.username, updatedEntry);
-              
-              setShowElaborateModal(false);
-              setElaborationInput('');
-              setAlertModal({
-                  show: true, 
-                  title: 'Goal Refined!', 
-                  message: 'Your goal description has been refined based on your elaboration.', 
-                  type: 'success'
-              });
-          } else {
-              setAlertModal({show: true, title: 'Refinement Failed', message: 'Could not refine the goal. Please try again.', type: 'error'});
-          }
-      } catch (error) {
-          console.error('Goal elaboration failed:', error);
-          setAlertModal({show: true, title: 'Refinement Failed', message: 'Failed to refine goal. Please try again.', type: 'error'});
-      } finally {
-          setIsElaborating(false);
+      if (response.finalContent.trim()) {
+        const updatedEntry = {
+          ...selectedEntry,
+          content: response.finalContent
+        };
+        
+        setChatEntries(prev => prev.map(e => e.id === selectedEntry.id ? updatedEntry : e));
+        setSelectedEntry(updatedEntry);
+        setEditedContent(response.finalContent);
+        
+        await api.updateEntry(currentUser.username, updatedEntry);
+        
+        setShowElaborateModal(false);
+        setElaborationInput('');
+        setAlertModal({
+          show: true, 
+          title: 'Goal Refined!', 
+          message: `Your goal has been enhanced using ${response.usedModels.length} AI model(s).`, 
+          type: 'success'
+        });
       }
+    } catch (error) {
+      console.error('Goal elaboration failed:', error);
+      setAlertModal({
+        show: true, 
+        title: 'Refinement Failed', 
+        message: 'Failed to refine goal. Please try again.', 
+        type: 'error'
+      });
+    } finally {
+      setIsElaborating(false);
+    }
   };
 
   const handleSummarize = async () => {
-      if (!quickPasteContent.trim()) return;
-      setIsSummarizing(true);
-      try {
-          const summary = await api.generateAICompletion(`Summarize briefly:\n\n${quickPasteContent}`);
-          if (summary) { setSummaryContent(summary); setIsSummaryModalOpen(true); }
-      } catch (error) { console.error(error); } finally { setIsSummarizing(false); }
+    if (!quickPasteContent.trim()) return;
+    setIsSummarizing(true);
+    try {
+      const response = await modelOrchestrator.getBestResponse(
+        `Summarize this content briefly and clearly:\n\n${quickPasteContent}`,
+        { taskType: 'summarize' }
+      );
+      
+      if (response.finalContent) {
+        setSummaryContent(response.finalContent);
+        setIsSummaryModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Summarization failed:', error);
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const handleApplySummary = () => {
@@ -425,111 +363,68 @@ Return only the refined description, nothing else.`;
   
   const enhanceGoalWithMultipleModels = async (entry: ChatEntry) => {
     try {
-      const HF_TOKEN = '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';
-      
-      // Step 1: Use Arch-Router to analyze and route the goal type
-      console.log('Step 1: Analyzing goal with Arch-Router...');
-      const routerPrompt = `Analyze this goal and provide a one-sentence description of what category it belongs to (e.g., personal development, business, learning, health, etc.):\n\n"${entry.title}"\n\nDescription: ${entry.content}`;
-      
-      const routerResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'katanemo/Arch-Router-1.5B:hf-inference',
-          messages: [{ role: 'user', content: routerPrompt }],
-          stream: false,
-        }),
+      const prompt = `
+Goal: "${entry.title}"
+Initial thoughts: ${entry.content}
+
+Please help by:
+1. Expanding the goal description to be clearer and more actionable
+2. Generating 4-7 specific, measurable steps to accomplish this goal
+3. Suggesting any missing details or considerations
+
+Format the response with:
+- Expanded description (2-3 paragraphs)
+- Action steps (each starting with "- ")
+`;
+
+      const response = await modelOrchestrator.getBestResponse(prompt, { 
+        goal: entry.title,
+        taskType: 'generate-steps'
       });
+
+      // Parse the response
+      const lines = response.finalContent.split('\n');
+      let expandedContent = '';
+      const steps: Array<{text: string; completed: boolean}> = [];
       
-      const routerData = await routerResponse.json();
-      const category = routerData.choices[0]?.message?.content || 'general';
-      console.log('Category:', category);
-      
-      // Step 2: Use SmolLM3 to expand and clarify the goal
-      console.log('Step 2: Expanding goal with SmolLM3...');
-      const expandPrompt = `You are helping someone accomplish their goal. Based on this goal in the category of "${category}", expand on it to make it clearer, more specific, and actionable. Keep it concise (2-3 paragraphs maximum).\n\nGoal: "${entry.title}"\n\nInitial thoughts: ${entry.content}\n\nExpanded description:`;
-      
-      const expandResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-          messages: [{ role: 'user', content: expandPrompt }],
-          stream: false,
-        }),
-      });
-      
-      const expandData = await expandResponse.json();
-      const expandedContent = expandData.choices[0]?.message?.content || entry.content;
-      console.log('Expanded content generated');
-      
-      // Step 3: Use SmolLM3 to generate actionable steps
-      console.log('Step 3: Generating action steps with SmolLM3...');
-      const stepsPrompt = `Based on this goal: "${entry.title}"\n\nDescription: ${expandedContent}\n\nGenerate 4-7 clear, specific, actionable steps to accomplish this goal. Each step should be practical and measurable. Format each step starting with a dash (-). Be concise and direct.`;
-      
-      const stepsResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-          messages: [{ role: 'user', content: stepsPrompt }],
-          stream: false,
-        }),
-      });
-      
-      const stepsData = await stepsResponse.json();
-      const stepsText = stepsData.choices[0]?.message?.content || '';
-      
-      // Parse steps from response
-      const steps = stepsText
-        .split('\n')
-        .filter((line: string) => line.trim().startsWith('-') || line.trim().match(/^\d+\./))
-        .map((line: string) => ({
-          text: line.replace(/^[-\d+\.)]\s*/, '').trim(),
-          completed: false
-        }))
-        .filter((step: any) => step.text.length > 0 && step.text.length < 200);
-      
-      console.log(`Generated ${steps.length} action steps`);
-      
-      // Step 4: Update the entry with enhanced content and steps
+      let inSteps = false;
+      for (const line of lines) {
+        if (line.trim().startsWith('-')) {
+          inSteps = true;
+          steps.push({
+            text: line.replace(/^-\s*/, '').trim(),
+            completed: false
+          });
+        } else if (inSteps && line.trim() === '') {
+          inSteps = false;
+        } else if (!inSteps) {
+          expandedContent += line + '\n';
+        }
+      }
+
+      // Update the entry
       const enhancedEntry: ChatEntry = {
         ...entry,
-        content: expandedContent,
+        content: expandedContent.trim() || response.finalContent,
         steps: steps.length > 0 ? steps : entry.steps
       };
-      
-      // Update in state
+
       setChatEntries(prev => prev.map(e => e.id === entry.id ? enhancedEntry : e));
-      
-      // Update in backend
       await api.updateEntry(currentUser.username, enhancedEntry);
-      
-      // Show success message
+
       setAlertModal({
         show: true, 
         title: 'Goal Enhanced!', 
-        message: `AI has expanded your goal and generated ${steps.length} actionable steps to help you achieve it.`, 
+        message: `AI enhanced your goal using ${response.usedModels.length} model(s) with ${response.confidence}% confidence.`, 
         type: 'success'
       });
-      
-      console.log('AI enhancement complete!');
-      
+
     } catch (error) {
       console.error('AI enhancement failed:', error);
       setAlertModal({
         show: true, 
         title: 'AI Processing', 
-        message: 'Could not enhance your goal with AI. The original version has been saved.', 
+        message: 'Could not enhance your goal. The original version has been saved.', 
         type: 'info'
       });
     }
@@ -727,123 +622,59 @@ Return only the refined description, nothing else.`;
   };
 
   const handleRefineMessage = async () => {
-      if (!refineInput.trim() || !selectedEntry) return;
-      
-      const userMessage = refineInput;
-      setRefineMessages(prev => [...prev, { role: 'user', text: userMessage }]);
-      setRefineInput('');
-      setIsRefining(true);
-      
-      try {
-          const HF_TOKEN = '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';
-          const conversationHistory = refineMessages.map(m => 
-              `${m.role === 'user' ? 'User' : 'AI'}: ${m.text}`
-          ).join('\n');
-          
-          const prompt = `You are a helpful assistant helping users clarify and accomplish their goals. Your job is to:
-1. Understand what the goal is
-2. Help describe it clearly
-3. Define actionable steps to accomplish it
-4. Suggest a better title if needed
+    if (!refineInput.trim() || !selectedEntry) return;
+    
+    const userMessage = refineInput;
+    setRefineMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setRefineInput('');
+    setIsRefining(true);
+    
+    try {
+      const conversationHistory = refineMessages.map(m => 
+        `${m.role === 'user' ? 'User' : 'AI'}: ${m.text}`
+      ).join('\n');
 
-Current goal:
-Title: ${selectedEntry.title}
-Details: ${selectedEntry.content}
+      const prompt = `
+You are helping someone accomplish their goal: "${selectedEntry.title}"
+
+Goal details: ${selectedEntry.content}
 
 Conversation so far:
 ${conversationHistory}
 User: ${userMessage}
 
-Be conversational and brief (1-2 sentences). Ask clarifying questions to understand: What is the goal? How would they describe it? What steps would accomplish it? Keep it simple and focused on making their goal actionable.`;
+Provide a helpful, concise response that helps clarify the goal and suggests actionable steps. Be conversational but focused.
+`;
 
-          const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                  Authorization: `Bearer ${HF_TOKEN}`,
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-                  messages: [{ role: 'user', content: prompt }],
-                  stream: true,
-              }),
+      let aiResponse = '';
+      
+      await modelOrchestrator.streamBestResponse(
+        prompt,
+        (chunk) => {
+          aiResponse += chunk;
+          setRefineMessages(prev => {
+            const updated = [...prev];
+            const lastMsg = updated[updated.length - 1];
+            if (lastMsg && lastMsg.role === 'ai' && lastMsg.text === '') {
+              updated[updated.length - 1] = { role: 'ai', text: aiResponse };
+            } else {
+              updated.push({ role: 'ai', text: aiResponse });
+            }
+            return updated;
           });
+        },
+        { goal: selectedEntry.title, taskType: 'refine' }
+      );
 
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error('Response body is not readable');
-
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let aiResponse = '';
-
-          try {
-              while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-
-                  buffer += decoder.decode(value, { stream: true });
-
-                  while (true) {
-                      const lineEnd = buffer.indexOf('\\n');
-                      if (lineEnd === -1) break;
-
-                      const line = buffer.slice(0, lineEnd).trim();
-                      buffer = buffer.slice(lineEnd + 1);
-
-                      if (line.startsWith('data: ')) {
-                          const data = line.slice(6);
-                          if (data === '[DONE]') break;
-
-                          try {
-                              const parsed = JSON.parse(data);
-                              const content = parsed.choices[0]?.delta?.content;
-                              if (content) {
-                                  aiResponse += content;
-                                  // Update the last message in real-time
-                                  setRefineMessages(prev => {
-                                      const updated = [...prev];
-                                      const lastMsg = updated[updated.length - 1];
-                                      if (lastMsg && lastMsg.role === 'ai' && lastMsg.text === '') {
-                                          updated[updated.length - 1] = { role: 'ai', text: aiResponse };
-                                      } else {
-                                          updated.push({ role: 'ai', text: aiResponse });
-                                      }
-                                      return updated;
-                                  });
-                              }
-                          } catch (e) {
-                              // Ignore invalid JSON
-                          }
-                      }
-                  }
-              }
-              
-              if (aiResponse.trim()) {
-                  setRefineMessages(prev => {
-                      const updated = [...prev];
-                      const lastMsg = updated[updated.length - 1];
-                      if (lastMsg?.role === 'ai') {
-                          updated[updated.length - 1] = { role: 'ai', text: aiResponse };
-                      } else {
-                          updated.push({ role: 'ai', text: aiResponse });
-                      }
-                      return updated;
-                  });
-              }
-          } finally {
-              reader.cancel();
-          }
-      } catch (error) {
-          console.error('Refine conversation failed:', error);
-          setRefineMessages(prev => [...prev, { 
-              role: 'ai', 
-              text: 'Sorry, I encountered an error. Please try again.' 
-          }]);
-      } finally {
-          setIsRefining(false);
-      }
+    } catch (error) {
+      console.error('Refine conversation failed:', error);
+      setRefineMessages(prev => [...prev, { 
+        role: 'ai', 
+        text: 'Sorry, I encountered an error. Please try again.' 
+      }]);
+    } finally {
+      setIsRefining(false);
+    }
   };
   
   const handleApplyRefinements = () => {
@@ -1175,386 +1006,245 @@ Be conversational and brief (1-2 sentences). Ask clarifying questions to underst
 
   const renderArticle = () => {
     if (!selectedEntry) return null;
+
+    if (isEditing) {
+      return (
+        <EditPage
+          title={editedTitle}
+          content={editedContent}
+          dueDate={editedDueDate}
+          priority={editedPriority}
+          steps={editedSteps}
+          onTitleChange={setEditedTitle}
+          onContentChange={setEditedContent}
+          onDueDateChange={setEditedDueDate}
+          onPriorityChange={setEditedPriority}
+          onStepsChange={setEditedSteps}
+          onSave={handleUpdateEntry}
+          onBack={() => setIsEditing(false)}
+          onEnhance={handleEnhanceEditNote}
+          onAddStep={() => setShowStepsModal(true)}
+          isEnhancing={isEnhancingEdit}
+        />
+      );
+    }
+
+    // View mode
     return (
       <div className="page-container" style={{paddingBottom: '100px'}}>
         <div className="article-nav" style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px'}}>
              <button className="article-nav-back" onClick={() => handleNav('LIBRARY')} style={{background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: 'var(--radius-md)', transition: 'all 0.2s', fontFamily: 'Syne, system-ui, sans-serif'}}>
                <Icon name="arrowBack" /> Back
              </button>
-             <button onClick={() => isEditing ? handleUpdateEntry() : setIsEditing(true)} className="btn btn-primary" style={{whiteSpace: 'nowrap'}}>
-               <Icon name={isEditing ? "check" : "settings"} /> {isEditing ? 'Save' : 'Edit'}
+             <button onClick={() => setIsEditing(true)} className="btn btn-primary" style={{whiteSpace: 'nowrap'}}>
+               <Icon name="settings" /> Edit
              </button>
         </div>
         <article className="card edit-card" style={{padding: '40px'}}>
-           {isEditing ? (
-             <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '30px'}}>
-               <div className="material-input-group" style={{marginBottom: 0}}>
-                 <label className="form-label">Title</label>
-                 <input 
-                   type="text"
-                   className="form-input" 
-                   value={editedTitle} 
-                   onChange={(e) => setEditedTitle(e.target.value)}
-                   placeholder="Note title"
-                 />
-               </div>
-               <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
-                 <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 200px'}}>
-                   <label className="form-label">Due Date *</label>
-                   <input 
-                     type="date"
-                     className="form-input" 
-                     value={editedDueDate} 
-                     onChange={(e) => setEditedDueDate(e.target.value)}
-                     min={new Date().toISOString().split('T')[0]}
-                     required
-                   />
-                 </div>
-                 <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 150px'}}>
-                   <label className="form-label">Priority</label>
-                   <select 
-                     className="form-input" 
-                     value={editedPriority} 
-                     onChange={(e) => setEditedPriority(e.target.value as 'low' | 'medium' | 'high')}
-                   >
-                     <option value="low">Low</option>
-                     <option value="medium">Medium</option>
-                     <option value="high">High</option>
-                   </select>
-                 </div>
-               </div>
-               
-               {/* Action Steps Section */}
-               <div className="material-input-group" style={{marginBottom: 0}}>
-                 <div style={{display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '16px', marginBottom: '16px'}}>
-                   <label className="form-label" style={{marginBottom: 0}}>Action Steps</label>
-                   <button 
-                     onClick={() => setShowStepsModal(true)}
-                     className="btn"
-                     style={{fontSize: '0.8rem', padding: '8px 14px', whiteSpace: 'nowrap', justifySelf: 'end'}}
-                   >
-                     <Icon name="add" style={{fontSize: '14px'}} /> Add Step
-                   </button>
-                 </div>
-                 
-                 {editedSteps.length > 0 ? (
-                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                     {editedSteps.map((step, idx) => (
-                       <div key={idx} style={{
-                         display: 'grid',
-                         gridTemplateColumns: 'auto 1fr auto',
-                         alignItems: 'center',
-                         gap: '12px',
-                         padding: '14px 14px',
-                         background: 'var(--bg-surface)',
-                         border: '1px solid var(--border)',
-                         borderRadius: 'var(--radius-md)',
-                         transition: 'all 0.2s ease',
-                         ':hover': {
-                           background: 'var(--bg-app)',
-                           borderColor: 'var(--accent-color)'
-                         }
-                       }}>
-                         <input 
-                           type="checkbox"
-                           checked={step.completed}
-                           onChange={() => {
-                             const updated = [...editedSteps];
-                             updated[idx].completed = !updated[idx].completed;
-                             setEditedSteps(updated);
-                           }}
-                           style={{cursor: 'pointer', width: '18px', height: '18px', flexShrink: 0}}
-                         />
-                         <span style={{
-                           textDecoration: step.completed ? 'line-through' : 'none',
-                           opacity: step.completed ? 0.6 : 1,
-                           fontSize: '0.9rem',
-                           lineHeight: 1.4,
-                           wordBreak: 'break-word',
-                           minWidth: 0
-                         }}>
-                           {step.text}
-                         </span>
-                         <button 
-                           onClick={() => setEditedSteps(editedSteps.filter((_, i) => i !== idx))}
-                           className="btn-icon"
-                           style={{
-                             width: '32px',
-                             height: '32px',
-                             padding: 0,
-                             background: 'transparent',
-                             border: '1px solid transparent',
-                             color: 'var(--text-secondary)',
-                             flexShrink: 0,
-                             transition: 'all 0.2s ease',
-                             borderRadius: '6px',
-                             display: 'flex',
-                             alignItems: 'center',
-                             justifyContent: 'center',
-                             cursor: 'pointer'
-                           }}
-                           onMouseEnter={(e) => {
-                             (e.currentTarget as HTMLElement).style.background = 'rgba(239, 68, 68, 0.1)';
-                             (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                             (e.currentTarget as HTMLElement).style.color = '#ef4444';
-                           }}
-                           onMouseLeave={(e) => {
-                             (e.currentTarget as HTMLElement).style.background = 'transparent';
-                             (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-                             (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
-                           }}
-                           title="Delete step"
-                         >
-                           <Icon name="x" style={{fontSize: '16px'}} />
-                         </button>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <p className="text-caption" style={{opacity: 0.6, fontSize: '0.85rem', margin: '12px 0', padding: '14px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', textAlign: 'center'}}>
-                     No steps yet. Click "Add Step" or "Enhance with AI" to generate action steps.
-                   </p>
-                 )}
-               </div>
+           <div>
+             {/* Image Placeholder */}
+             <div className="article-image-placeholder" style={{
+               width: '100%',
+               height: '200px',
+               background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.05) 100%)',
+               borderRadius: 'var(--radius-lg)',
+               marginBottom: '24px',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               border: '1px solid var(--border)',
+               position: 'relative',
+               overflow: 'hidden'
+             }}>
+               <Icon name="image" style={{ fontSize: '48px', color: 'var(--text-secondary)', opacity: 0.3 }} />
              </div>
-           ) : (
-             <div>
-               {/* Image Placeholder */}
-               <div className="article-image-placeholder" style={{
-                 width: '100%',
-                 height: '200px',
-                 background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.05) 100%)',
-                 borderRadius: 'var(--radius-lg)',
-                 marginBottom: '24px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 justifyContent: 'center',
-                 border: '1px solid var(--border)',
-                 position: 'relative',
-                 overflow: 'hidden'
-               }}>
-                 <Icon name="image" style={{ fontSize: '48px', color: 'var(--text-secondary)', opacity: 0.3 }} />
-               </div>
+             
+             <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>{selectedEntry.title}</h1>
+             <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap'}}>
+               <p className="text-caption">{new Date(selectedEntry.timestamp).toLocaleString()}</p>
+               {selectedEntry.priority && (
+                 <span className={`meta-tag ${selectedEntry.priority === 'high' ? 's-blocked' : selectedEntry.priority === 'low' ? 's-review' : 's-active'}`} style={{
+                   display: 'inline-flex',
+                   alignItems: 'center',
+                   gap: '4px',
+                   fontSize: '0.6875rem',
+                   fontWeight: 500,
+                   borderRadius: '6px',
+                   padding: '4px 8px',
+                   fontFamily: 'Geist Mono, monospace'
+                 }}>
+                   <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'currentColor' }}></span>
+                   {selectedEntry.priority.charAt(0).toUpperCase() + selectedEntry.priority.slice(1)}
+                 </span>
+               )}
+             </div>
+             
+             {/* Progress Bar */}
+             {selectedEntry.dueDate && (() => {
+               const now = new Date().getTime();
+               const created = new Date(selectedEntry.timestamp).getTime();
+               const due = new Date(selectedEntry.dueDate).getTime();
+               const total = due - created;
+               const elapsed = now - created;
+               const progress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
+               const isOverdue = now > due;
+               const progressColor = progress < 50 ? '#10b981' : progress < 75 ? '#f59e0b' : progress < 100 ? '#f97316' : '#ef4444';
                
-               <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>{selectedEntry.title}</h1>
-               <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap'}}>
-                 <p className="text-caption">{new Date(selectedEntry.timestamp).toLocaleString()}</p>
-                 {selectedEntry.priority && (
-                   <span className={`meta-tag ${selectedEntry.priority === 'high' ? 's-blocked' : selectedEntry.priority === 'low' ? 's-review' : 's-active'}`} style={{
-                     display: 'inline-flex',
-                     alignItems: 'center',
-                     gap: '4px',
-                     fontSize: '0.6875rem',
-                     fontWeight: 500,
-                     borderRadius: '6px',
-                     padding: '4px 8px',
-                     fontFamily: 'Geist Mono, monospace'
+               return (
+                 <div style={{
+                   padding: '16px',
+                   background: 'var(--bg-surface)',
+                   borderRadius: 'var(--radius-md)',
+                   border: '1px solid var(--border)',
+                   marginBottom: '24px'
+                 }}>
+                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                     <span style={{ fontSize: '0.75rem', fontFamily: 'Geist Mono, monospace', color: isOverdue ? '#ff7043' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                       <Icon name="history" style={{ fontSize: '14px' }} />
+                       {isOverdue ? 'Overdue' : `Due ${new Date(selectedEntry.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                     </span>
+                     <span style={{ fontSize: '0.875rem', fontFamily: 'Geist Mono, monospace', color: progressColor, fontWeight: 600 }}>
+                       {Math.round(progress)}%
+                     </span>
+                   </div>
+                   <div style={{ 
+                     width: '100%', 
+                     height: '8px', 
+                     background: 'var(--bg-app)', 
+                     borderRadius: '4px',
+                     overflow: 'hidden'
                    }}>
-                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'currentColor' }}></span>
-                     {selectedEntry.priority.charAt(0).toUpperCase() + selectedEntry.priority.slice(1)}
-                   </span>
-                 )}
-               </div>
-               
-               {/* Progress Bar */}
-               {selectedEntry.dueDate && (() => {
-                 const now = new Date().getTime();
-                 const created = new Date(selectedEntry.timestamp).getTime();
-                 const due = new Date(selectedEntry.dueDate).getTime();
-                 const total = due - created;
-                 const elapsed = now - created;
-                 const progress = Math.min(Math.max((elapsed / total) * 100, 0), 100);
-                 const isOverdue = now > due;
-                 const progressColor = progress < 50 ? '#10b981' : progress < 75 ? '#f59e0b' : progress < 100 ? '#f97316' : '#ef4444';
-                 
-                 return (
-                   <div style={{
-                     padding: '16px',
-                     background: 'var(--bg-surface)',
-                     borderRadius: 'var(--radius-md)',
-                     border: '1px solid var(--border)',
-                     marginBottom: '24px'
-                   }}>
-                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                       <span style={{ fontSize: '0.75rem', fontFamily: 'Geist Mono, monospace', color: isOverdue ? '#ff7043' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                         <Icon name="history" style={{ fontSize: '14px' }} />
-                         {isOverdue ? 'Overdue' : `Due ${new Date(selectedEntry.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                       </span>
-                       <span style={{ fontSize: '0.875rem', fontFamily: 'Geist Mono, monospace', color: progressColor, fontWeight: 600 }}>
-                         {Math.round(progress)}%
-                       </span>
-                     </div>
                      <div style={{ 
-                       width: '100%', 
-                       height: '8px', 
-                       background: 'var(--bg-app)', 
-                       borderRadius: '4px',
-                       overflow: 'hidden'
-                     }}>
-                       <div style={{ 
-                         width: `${progress}%`, 
-                         height: '100%', 
-                         background: progressColor,
-                         transition: 'width 0.3s ease',
-                         borderRadius: '4px'
-                       }} />
-                     </div>
+                       width: `${progress}%`, 
+                       height: '100%', 
+                       background: progressColor,
+                       transition: 'width 0.3s ease',
+                       borderRadius: '4px'
+                     }} />
                    </div>
-                 );
-               })()}
-             </div>
-           )}
-           {isEditing ? (
-             <div style={{ position: 'relative' }}>
-               <textarea 
-                 value={editedContent} 
-                 onChange={(e) => setEditedContent(e.target.value)} 
-                 className="quick-paste-area edit-textarea" 
-                 aria-label="Edit note content" 
-                 style={{minHeight: '300px', paddingBottom: '60px'}} 
-               />
-               <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                 {isEnhancingEdit && <span className="text-caption" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>Generating steps...</span>}
-                 <button 
-                   onClick={handleEnhanceEditNote}
-                   className="btn-icon"
-                   disabled={!editedContent.trim() || isEnhancingEdit}
-                   style={{
-                     background: isEnhancingEdit ? 'rgba(var(--accent-rgb), 0.15)' : 'var(--bg-surface)',
-                     border: '1px solid var(--border)',
-                     width: '40px',
-                     height: '40px',
-                     borderRadius: '50%',
-                     color: 'var(--accent-color)'
-                   }}
-                   title="Generate Action Steps with AI"
-                 >
-                   <Icon name={isEnhancingEdit ? "autorenew" : "analytics"} className={isEnhancingEdit ? "spin" : ""} style={{ fontSize: '18px' }} />
-                 </button>
-               </div>
-             </div>
-           ) : (
-               <div>
-                 <div className="markdown-content">
-                   <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]} components={{ pre: CodeBlock }}>{selectedEntry.content}</ReactMarkdown>
                  </div>
-                 
-                 {/* Action Steps Display */}
-                 {selectedEntry.steps && selectedEntry.steps.length > 0 && (
-                   <div style={{
-                     marginTop: '30px',
-                     padding: '20px',
-                     background: 'var(--bg-surface)',
-                     borderRadius: 'var(--radius-lg)',
-                     border: '1px solid var(--border)'
+               );
+             })()}
+
+             <div className="markdown-content">
+               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]} components={{ pre: CodeBlock }}>{selectedEntry.content}</ReactMarkdown>
+             </div>
+             
+             {/* Action Steps Display */}
+             {selectedEntry.steps && selectedEntry.steps.length > 0 && (
+               <div style={{
+                 marginTop: '30px',
+                 padding: '20px',
+                 background: 'var(--bg-surface)',
+                 borderRadius: 'var(--radius-lg)',
+                 border: '1px solid var(--border)'
+               }}>
+                 <h3 className="text-title" style={{
+                   fontSize: '1rem',
+                   marginBottom: '16px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '8px'
+                 }}>
+                   <Icon name="list" style={{fontSize: '18px', color: 'var(--accent-color)'}} />
+                   Action Steps
+                   <span className="text-caption" style={{
+                     marginLeft: 'auto',
+                     opacity: 0.7,
+                     fontSize: '0.8rem'
                    }}>
-                     <h3 className="text-title" style={{
-                       fontSize: '1rem',
-                       marginBottom: '16px',
-                       display: 'flex',
-                       alignItems: 'center',
-                       gap: '8px'
-                     }}>
-                       <Icon name="list" style={{fontSize: '18px', color: 'var(--accent-color)'}} />
-                       Action Steps
-                       <span className="text-caption" style={{
-                         marginLeft: 'auto',
-                         opacity: 0.7,
-                         fontSize: '0.8rem'
-                       }}>
-                         {selectedEntry.steps.filter(s => s.completed).length} / {selectedEntry.steps.length} completed
-                       </span>
-                     </h3>
-                     <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                       {selectedEntry.steps.map((step, idx) => (
-                         <div 
-                           key={idx} 
-                           onClick={async () => {
-                             // Toggle step completion
-                             const updatedSteps = [...selectedEntry.steps];
-                             updatedSteps[idx].completed = !updatedSteps[idx].completed;
-                             const updated = {...selectedEntry, steps: updatedSteps};
-                             setChatEntries(prev => prev.map(e => e.id === selectedEntry.id ? updated : e));
-                             setSelectedEntry(updated);
-                             setEditedSteps(updatedSteps);
-                             await api.updateEntry(currentUser.username, updated);
-                           }}
-                           style={{
-                             display: 'flex',
-                             alignItems: 'flex-start',
-                             gap: '12px',
-                             padding: '12px',
-                             background: step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)',
-                             borderRadius: 'var(--radius-md)',
-                             border: '1px solid var(--border)',
-                             cursor: 'pointer',
-                             transition: 'all 0.2s ease',
-                             opacity: 0.9
-                           }}
-                           onMouseEnter={(e) => {
-                             (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--bg-surface)';
-                             (e.currentTarget as HTMLElement).style.opacity = '1';
-                           }}
-                           onMouseLeave={(e) => {
-                             (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)';
-                             (e.currentTarget as HTMLElement).style.opacity = '0.9';
-                           }}
-                         >
-                           <Icon 
-                             name={step.completed ? "checkCircle" : "radioButtonUnchecked"} 
-                             style={{
-                               fontSize: '20px',
-                               color: step.completed ? 'var(--accent-color)' : 'var(--text-secondary)',
-                               marginTop: '2px',
-                               flexShrink: 0,
-                               transition: 'color 0.2s ease'
-                             }}
-                           />
-                           <span style={{
-                             flex: 1,
-                             textDecoration: step.completed ? 'line-through' : 'none',
-                             opacity: step.completed ? 0.7 : 1,
-                             fontSize: '0.95rem',
-                             lineHeight: 1.5,
-                             transition: 'all 0.2s ease'
-                           }}>
-                             {step.text}
-                           </span>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-                 
-                 {/* Action Buttons & Mark as Done Button */}
-                 <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
-                   <button 
-                     onClick={() => setShowElaborateModal(true)}
-                     className="btn btn-primary"
-                     style={{display: 'inline-flex', alignItems: 'center', gap: '8px'}}
-                   >
-                     <Icon name="lightbulb" /> Elaborate Goal
-                   </button>
-                   {selectedEntry.steps && selectedEntry.steps.length > 0 && selectedEntry.steps.some(s => !s.completed) && (
-                     <button 
-                       onClick={handleMarkDone}
-                       className="btn"
+                     {selectedEntry.steps.filter(s => s.completed).length} / {selectedEntry.steps.length} completed
+                   </span>
+                 </h3>
+                 <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                   {selectedEntry.steps.map((step, idx) => (
+                     <div 
+                       key={idx} 
+                       onClick={async () => {
+                         // Toggle step completion
+                         const updatedSteps = [...selectedEntry.steps];
+                         updatedSteps[idx].completed = !updatedSteps[idx].completed;
+                         const updated = {...selectedEntry, steps: updatedSteps};
+                         setChatEntries(prev => prev.map(e => e.id === selectedEntry.id ? updated : e));
+                         setSelectedEntry(updated);
+                         setEditedSteps(updatedSteps);
+                         await api.updateEntry(currentUser.username, updated);
+                       }}
                        style={{
-                         display: 'inline-flex', 
-                         alignItems: 'center', 
-                         gap: '8px',
-                         background: 'rgba(16, 185, 129, 0.1)',
-                         color: '#10b981',
-                         border: '1px solid #10b981',
-                         marginLeft: 'auto'
+                         display: 'flex',
+                         alignItems: 'flex-start',
+                         gap: '12px',
+                         padding: '12px',
+                         background: step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)',
+                         borderRadius: 'var(--radius-md)',
+                         border: '1px solid var(--border)',
+                         cursor: 'pointer',
+                         transition: 'all 0.2s ease',
+                         opacity: 0.9
+                       }}
+                       onMouseEnter={(e) => {
+                         (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--bg-surface)';
+                         (e.currentTarget as HTMLElement).style.opacity = '1';
+                       }}
+                       onMouseLeave={(e) => {
+                         (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)';
+                         (e.currentTarget as HTMLElement).style.opacity = '0.9';
                        }}
                      >
-                       <Icon name="check" /> Mark as Done
-                     </button>
-                   )}
+                       <Icon 
+                         name={step.completed ? "checkCircle" : "radioButtonUnchecked"} 
+                         style={{
+                           fontSize: '20px',
+                           color: step.completed ? 'var(--accent-color)' : 'var(--text-secondary)',
+                           marginTop: '2px',
+                           flexShrink: 0,
+                           transition: 'color 0.2s ease'
+                         }}
+                       />
+                       <span style={{
+                         flex: 1,
+                         textDecoration: step.completed ? 'line-through' : 'none',
+                         opacity: step.completed ? 0.7 : 1,
+                         fontSize: '0.95rem',
+                         lineHeight: 1.5,
+                         transition: 'all 0.2s ease'
+                       }}>
+                         {step.text}
+                       </span>
+                     </div>
+                   ))}
                  </div>
                </div>
-           )}
+             )}
+             
+             {/* Action Buttons & Mark as Done Button */}
+             <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
+               <button 
+                 onClick={() => setShowElaborateModal(true)}
+                 className="btn btn-primary"
+                 style={{display: 'inline-flex', alignItems: 'center', gap: '8px'}}
+               >
+                 <Icon name="lightbulb" /> Elaborate Goal
+               </button>
+               {selectedEntry.steps && selectedEntry.steps.length > 0 && selectedEntry.steps.some(s => !s.completed) && (
+                 <button 
+                   onClick={handleMarkDone}
+                   className="btn"
+                   style={{
+                     display: 'inline-flex', 
+                     alignItems: 'center', 
+                     gap: '8px',
+                     background: 'rgba(16, 185, 129, 0.1)',
+                     color: '#10b981',
+                     border: '1px solid #10b981',
+                     marginLeft: 'auto'
+                   }}
+                 >
+                   <Icon name="check" /> Mark as Done
+                 </button>
+               )}
+             </div>
+           </div>
         </article>
       </div>
     );
