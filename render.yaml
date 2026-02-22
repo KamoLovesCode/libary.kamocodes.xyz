@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: npm install && npm --prefix server install && npm run build
-    startCommand: concurrently -k "node server/server.js" "npm run preview"
+    startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
         value: production
