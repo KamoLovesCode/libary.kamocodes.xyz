@@ -40,8 +40,10 @@ A modern full-stack note-taking and AI-assisted workspace application with Mongo
    
    Edit `.env` in root:
    ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   VITE_API_URL=http://localhost:3001
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
+   VITE_HF_TOKEN=your_huggingface_token_here
+   # Optional only when frontend and API are split across domains
+   # VITE_API_URL=https://your-api-domain.onrender.com
    ```
 
 4. **Start the Application**
@@ -116,6 +118,13 @@ Invoke-WebRequest -Uri "http://localhost:3001/api/entries?username=test" -UseBas
 **Backend:** Railway/Render (deploy `server/`)  
 
 Set `VITE_API_URL` to your backend URL.
+
+### Render (single service) recommended
+
+- Build Command: `npm install && npm --prefix server install && npm run build`
+- Start Command: `npm start`
+- Required env vars: `MONGO_ENABLED`, `MONGODB_URI`, `MONGODB_DB`, `VITE_GEMINI_API_KEY`
+- Optional env vars: `VITE_HF_TOKEN`, `VITE_API_URL` (only for split deployments)
 
 ## 📝 License
 

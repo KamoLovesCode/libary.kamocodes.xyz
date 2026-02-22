@@ -2,10 +2,11 @@
 import { GoogleGenAI } from "@google/genai";
 
 const getAiClient = () => {
-    if (!process.env.API_KEY) {
+    const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || (import.meta.env.GEMINI_API_KEY as string);
+    if (!apiKey) {
         throw new Error("API Key not found");
     }
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return new GoogleGenAI({ apiKey });
 };
 
 export const aiService = {

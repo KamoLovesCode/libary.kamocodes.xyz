@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: gpt-chat-library
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm --prefix server install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_ENABLED
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        sync: false
+      - key: VITE_GEMINI_API_KEY
+        sync: false
+      - key: VITE_HF_TOKEN
+        sync: false

@@ -7,20 +7,25 @@
     <title>GPT Chat Library</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.svg">
-    <meta name="theme-color" content="#FF1F1F">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JZFfSuo+MovJ+ASSaCmr5LgCEYpjwCnoBig3OBbrLMSgHsSGD7rg9OQcasA9ioKfl4RaccwmvymA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script>
       // Apply theme immediately before React renders to prevent theme flash
       (function() {
         const theme = localStorage.getItem('app-theme') || 'dark';
         const accentColor = localStorage.getItem('app-accent-color') || 'neon-red';
         document.documentElement.setAttribute('data-theme', theme);
-        document.body.setAttribute('data-theme', theme);
+        if (document.body) {
+          document.body.setAttribute('data-theme', theme);
+        } else {
+          document.addEventListener('DOMContentLoaded', function() {
+            document.body.setAttribute('data-theme', theme);
+          }, { once: true });
+        }
         
         // Apply accent color
         const accentColors = {
@@ -30,7 +35,7 @@
           'violet': { hex: '#AA00FF', variant: '#8C00D1', rgb: '170, 0, 255' },
           'amber': { hex: '#FFAA00', variant: '#DB9200', rgb: '255, 170, 0' },
         };
-        const color = accentColors[accentColor as keyof typeof accentColors] || accentColors['neon-red'];
+        const color = accentColors[accentColor] || accentColors['neon-red'];
         document.documentElement.style.setProperty('--accent-color', color.hex);
         document.documentElement.style.setProperty('--accent-variant', color.variant);
         document.documentElement.style.setProperty('--accent-rgb', color.rgb);
@@ -681,6 +686,7 @@
 
       .pill-navbar {
         background: rgba(21, 21, 21, 0.85);
+        -webkit-backdrop-filter: blur(16px);
         backdrop-filter: blur(16px);
         padding: 4px;
         border-radius: var(--radius-pill);
@@ -756,6 +762,7 @@
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.85);
+        -webkit-backdrop-filter: blur(8px);
         backdrop-filter: blur(8px);
         display: flex;
         align-items: center;
@@ -837,7 +844,6 @@
         animation: fadeInScale 0.2s ease;
       }
     </style>
-  <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

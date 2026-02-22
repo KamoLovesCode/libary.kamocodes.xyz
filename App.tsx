@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypePrism from 'rehype-prism-plus';
+import './App.css';
 import { ChatEntry, User } from './types';
 import Icon from './components/Icon';
 import CodeBlock from './components/CodeBlock';
-import VoiceSession from './components/VoiceSession';
 import LandingPage from './components/LandingPage';
 import SettingsModal, { ACCENT_COLORS } from './components/SettingsModal';
 import Modal from './components/Modal';
@@ -213,26 +212,12 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
       if (!selectedEntry) return;
       setIsEnhancingEdit(true);
       try {
-          const HF_TOKEN = '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';
           const prompt = `Based on this goal: "${selectedEntry.title}"\n\nDescription: ${editedContent}\n\nGenerate 3-5 clear, actionable steps to accomplish this goal. Return ONLY the steps, one per line, starting each with a dash (-). Be specific and practical.`;
-          
-          const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                  Authorization: `Bearer ${HF_TOKEN}`,
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  model: 'HuggingFaceTB/SmolLM3-3B:hf-inference',
-                  messages: [{ role: 'user', content: prompt }],
-                  stream: false,
-              }),
-          });
-          
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
-          
-          const data = await response.json();
-          const stepsText = data.choices[0]?.message?.content || '';
+        const response = await modelOrchestrator.getBestResponse(prompt, {
+        goal: selectedEntry.title,
+        taskType: 'generate-steps',
+        });
+        const stepsText = response.finalContent || '';
           
           // Parse steps from response
           const steps = stepsText
@@ -252,7 +237,12 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
           }
       } catch (error) {
           console.error('Step generation failed:', error);
-          setAlertModal({show: true, title: 'Generation Failed', message: 'Failed to generate steps. Please try again.', type: 'error'});
+          setAlertModal({
+          show: true,
+          title: 'Generation Failed',
+          message: `${error instanceof Error ? error.message : 'Failed to generate steps. Please try again.'}`,
+          type: 'error'
+          });
       } finally {
           setIsEnhancingEdit(false);
       }
@@ -749,12 +739,12 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
           <button className={`nav-pill-item ${currentView === 'LIBRARY' ? 'active' : ''}`} onClick={() => handleNav('LIBRARY')}>
             <Icon name="library" /> Library
           </button>
-          <div style={{width: 1, height: '20px', background: 'var(--border)', margin: '0 3px'}}></div>
-          <button className="nav-pill-item nav-icon-only" onClick={() => setIsCreateNoteModalOpen(true)} style={{background: 'var(--accent-color)', color: '#fff'}} title="Create detailed note">
+           <div className="nav-pill-divider"></div>
+           <button className="nav-pill-item nav-icon-only nav-pill-create" onClick={() => setIsCreateNoteModalOpen(true)} title="Create detailed note">
              <Icon name="add" />
           </button>
           <button className={`nav-pill-item nav-icon-only ${currentView === 'PROFILE' ? 'active' : ''}`} onClick={() => handleNav('PROFILE')} title="Profile">
-             <div className="user-avatar-pill"><Icon name="person" style={{fontSize: '18px'}}/></div>
+             <div className="user-avatar-pill"><Icon name="person" className="icon-md"/></div>
           </button>
         </nav>
       </div>
@@ -769,56 +759,36 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
     return (
       <div className="page-container quick-paste-wrapper">
         {/* Welcome Header */}
-        <div className="welcome-header" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '16px', 
-          marginBottom: 'var(--space-6)',
-          padding: '20px',
-          background: 'var(--bg-surface)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border)'
-        }}>
-          <div className="avatar" style={{ 
-            width: '56px', 
-            height: '56px', 
-            borderRadius: '50%', 
-            background: 'var(--accent-color)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: '#fff',
-            flexShrink: 0
-          }}>
-            <Icon name="person" style={{ fontSize: '28px' }} />
+        <div className="welcome-header">
+          <div className="avatar welcome-avatar">
+            <Icon name="person" className="icon-xl" />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 className="text-title" style={{ margin: 0, marginBottom: '4px', fontSize: '1.25rem' }}>
+          <div className="welcome-content">
+            <h2 className="text-title welcome-title">
               {greeting}, {currentUser.username}!
             </h2>
-            <p className="text-caption" style={{ margin: 0, opacity: 0.7 }}>
+            <p className="text-caption welcome-subtitle">
               What's on your mind today?
             </p>
           </div>
         </div>
 
-        <div style={{marginBottom: 'var(--space-3)', textAlign: 'left'}}>
-          <h2 className="text-title" style={{color: 'var(--accent-color)', marginBottom: '6px', fontSize: '1.05rem'}}>Quick Capture</h2>
-          <p className="text-caption" style={{opacity: 0.8, fontSize: '0.85rem'}}>Quickly jot down your goal and set a target date.</p>
+        <div className="quick-capture-header">
+          <h2 className="text-title quick-capture-title">Quick Capture</h2>
+          <p className="text-caption quick-capture-subtitle">Quickly jot down your goal and set a target date.</p>
         </div>
         
-        <div className="quick-capture-wrapper" style={{width: '100%', marginBottom: '2rem'}}>
+        <div className="quick-capture-container">
             <textarea 
-                className="quick-paste-area quick-capture-textarea" 
+                className="quick-paste-area quick-capture-textarea quick-capture-textarea-wrapper" 
                 placeholder="What's your goal? Type it here..." 
                 value={quickPasteContent} 
                 onChange={(e) => setQuickPasteContent(e.target.value)} 
-                onKeyDown={handleKeyDown} 
-                style={{ minHeight: '120px', padding: '16px', width: '100%', marginBottom: '12px' }}
+                onKeyDown={handleKeyDown}
             />
             
             {/* Due Date Button */}
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px'}}>
+            <div className="due-date-controls">
                 <button 
                     onClick={() => {
                         const dateInput = document.createElement('input');
@@ -836,19 +806,9 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                         };
                         dateInput.showPicker();
                     }}
-                    className="btn"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '8px 14px',
-                        fontSize: '0.85rem',
-                        background: quickCaptureDueDate ? 'var(--accent-color)' : 'var(--bg-surface)',
-                        color: quickCaptureDueDate ? '#fff' : 'var(--text-primary)',
-                        border: quickCaptureDueDate ? 'none' : '1px solid var(--border)',
-                    }}
+                    className={`btn due-date-btn ${quickCaptureDueDate ? 'has-date' : ''}`}
                 >
-                    <Icon name="event" style={{fontSize: '16px'}} />
+                    <Icon name="event" className="icon-sm" />
                     {quickCaptureDueDate 
                         ? new Date(quickCaptureDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : 'Set Target Date'
@@ -857,49 +817,42 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                 {quickCaptureDueDate && (
                     <button 
                         onClick={() => setQuickCaptureDueDate('')}
-                        className="btn-icon"
-                        style={{
-                            width: '32px',
-                            height: '32px',
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border)',
-                        }}
+                        className="btn-icon clear-date-btn"
                         title="Clear date"
                     >
-                        <Icon name="x" style={{fontSize: '14px'}} />
+                        <Icon name="x" className="icon-xs" />
                     </button>
                 )}
             </div>
             
-            <div className="quick-capture-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {isEnhancing && <span className="text-caption" style={{ color: 'var(--accent-color)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Enhancing...</span>}
+            <div className="quick-capture-actions">
+                {isEnhancing && <span className="text-caption enhancing-status">Enhancing...</span>}
                 <button 
                     onClick={handleEnhanceWithAI} 
-                    className="btn-icon" 
-                    style={{ background: isEnhancing ? 'rgba(var(--accent-rgb), 0.15)' : 'var(--bg-surface)', border: '1px solid var(--border)', width: '40px', height: '40px', borderRadius: '50%', color: 'var(--accent-color)', flexShrink: 0 }}
+                    className={`btn-icon enhance-btn ${isEnhancing ? 'active' : ''}`}
                     disabled={!quickPasteContent.trim() || isEnhancing}
                     title="Enhance with AI"
                 >
-                    <Icon name={isEnhancing ? "autorenew" : "analytics"} className={isEnhancing ? "spin" : ""} style={{ fontSize: '18px' }} />
+                    <Icon name={isEnhancing ? "autorenew" : "analytics"} className={`icon-md ${isEnhancing ? "spin" : ""}`} />
                 </button>
-                <button onClick={handleSummarize} className="btn-icon" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', width: '40px', height: '40px', borderRadius: '50%', color: 'var(--text-secondary)', flexShrink: 0 }} disabled={!quickPasteContent.trim() || isSummarizing} title="Summarize">
-                    <Icon name={isSummarizing ? "autorenew" : "copy"} style={{ fontSize: '18px' }} />
+                <button onClick={handleSummarize} className="btn-icon summarize-btn" disabled={!quickPasteContent.trim() || isSummarizing} title="Summarize">
+                    <Icon name={isSummarizing ? "autorenew" : "copy"} className="icon-md" />
                 </button>
-                <button onClick={handleQuickSave} className="btn btn-primary" style={{ padding: '10px 20px', borderRadius: 'var(--radius-pill)', fontSize: '0.875rem', whiteSpace: 'nowrap', marginLeft: 'auto' }} disabled={!quickPasteContent.trim()}>
+                <button onClick={handleQuickSave} className="btn btn-primary quick-save-btn" disabled={!quickPasteContent.trim()}>
                     Quick Save
                 </button>
             </div>
         </div>
 
-        <div style={{ width: '100%' }}>
-            <h2 className="text-title" style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Recent Notes</h2>
+        <div className="recent-notes-container">
+            <h2 className="text-title recent-notes-title">Recent Notes</h2>
             {sorted.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>
-                    <Icon name="bookOpen" style={{ fontSize: '3rem', marginBottom: '1rem' }} />
+                <div className="empty-notes">
+                    <Icon name="bookOpen" className="icon-3xl" />
                     <p>No notes yet. Start typing above to create one.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="recent-notes-list">
                     {sorted.slice(0, 5).map(entry => (
                         <ChatCard 
                             key={entry.id} 
@@ -909,7 +862,7 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                         />
                     ))}
                     {sorted.length > 5 && (
-                        <button onClick={() => handleNav('LIBRARY')} className="btn" style={{ background: 'transparent', border: '1px solid var(--border)', width: '100%', marginTop: '8px' }}>
+                        <button onClick={() => handleNav('LIBRARY')} className="btn view-all-btn">
                             View All in Library
                         </button>
                     )}
@@ -941,9 +894,9 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
     });
     return (
     <div className="page-container">
-      <div className="library-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)'}}>
-        <h1 className="text-headline library-title" style={{fontSize: '1.75rem', margin: 0}}>Library</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="library-header">
+        <h1 className="text-headline library-title">Library</h1>
+        <div className="library-controls">
              {isLoading && <Icon name="autorenew" className="animate-spin"/>}
              <SortDropdown sortOrder={sortOrder} onSortChange={setSortOrder} />
         </div>
@@ -977,27 +930,27 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
   };
 
   const renderProfile = () => (
-    <div className="page-container" style={{alignItems: 'center', justifyContent: 'center'}}>
-        <div className="card profile-card" style={{width: '100%', maxWidth: '400px', padding: '40px', textAlign: 'center'}}>
-            <div className="avatar-large" style={{ width: '80px', height: '80px', background: 'var(--accent-color)', borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                <Icon name="person" style={{fontSize: '32px'}}/>
+    <div className="page-container profile-container">
+        <div className="card profile-card profile-card-inner">
+            <div className="avatar-large profile-avatar">
+                <Icon name="person" className="icon-2xl"/>
             </div>
-            <h2 className="text-headline" style={{marginBottom: '30px'}}>{currentUser.username}</h2>
+            <h2 className="text-headline profile-username">{currentUser.username}</h2>
             
-            <button onClick={() => api.exportToJson(chatEntries)} className="nav-pill-item" style={{width: '100%', justifyContent: 'center', marginBottom: '10px', background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent-color)', border: 'none'}}>
+            <button onClick={() => api.exportToJson(chatEntries)} className="nav-pill-item profile-action-btn profile-export-btn">
                 <Icon name="download" /> Export JSON Library
             </button>
 
-            <label className="nav-pill-item" style={{width: '100%', justifyContent: 'center', marginBottom: '10px', background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent-color)', border: 'none', cursor: 'pointer'}}>
+            <label className="nav-pill-item profile-action-btn profile-import-label">
                 <Icon name="upload" /> Import JSON Library
-                <input type="file" accept=".json" style={{display: 'none'}} onChange={handleImportJson} />
+                <input type="file" accept=".json" className="hidden-file-input" onChange={handleImportJson} />
             </label>
 
-            <button onClick={() => setIsSettingsOpen(true)} className="nav-pill-item" style={{width: '100%', justifyContent: 'center', marginBottom: '10px', border: '1px solid var(--border)'}}>
+            <button onClick={() => setIsSettingsOpen(true)} className="nav-pill-item profile-action-btn profile-settings-btn">
                 <Icon name="settings" /> Settings
             </button>
 
-            <button className="nav-pill-item" style={{width: '100%', justifyContent: 'center', color: '#EF4444'}} onClick={() => setShowLogoutConfirm(true)}>
+            <button className="nav-pill-item profile-action-btn profile-logout-btn" onClick={() => setShowLogoutConfirm(true)}>
                 <Icon name="logout" /> Logout
             </button>
         </div>
@@ -1031,49 +984,28 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
 
     // View mode
     return (
-      <div className="page-container" style={{paddingBottom: '100px'}}>
-        <div className="article-nav" style={{marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px'}}>
-             <button className="article-nav-back" onClick={() => handleNav('LIBRARY')} style={{background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: 'var(--radius-md)', transition: 'all 0.2s', fontFamily: 'Syne, system-ui, sans-serif'}}>
+      <div className="page-container article-container">
+        <div className="article-nav">
+             <button className="article-back-btn" onClick={() => handleNav('LIBRARY')}>
                <Icon name="arrowBack" /> Back
              </button>
-             <button onClick={() => setIsEditing(true)} className="btn btn-primary" style={{whiteSpace: 'nowrap'}}>
+             <button onClick={() => setIsEditing(true)} className="btn btn-primary article-edit-btn">
                <Icon name="settings" /> Edit
              </button>
         </div>
-        <article className="card edit-card" style={{padding: '40px'}}>
+        <article className="card edit-card article-card">
            <div>
              {/* Image Placeholder */}
-             <div className="article-image-placeholder" style={{
-               width: '100%',
-               height: '200px',
-               background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.05) 100%)',
-               borderRadius: 'var(--radius-lg)',
-               marginBottom: '24px',
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               border: '1px solid var(--border)',
-               position: 'relative',
-               overflow: 'hidden'
-             }}>
-               <Icon name="image" style={{ fontSize: '48px', color: 'var(--text-secondary)', opacity: 0.3 }} />
+             <div className="article-image-placeholder">
+               <Icon name="image" className="icon-3xl" />
              </div>
              
-             <h1 className="text-headline" style={{color: 'var(--accent-color)'}}>{selectedEntry.title}</h1>
-             <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap'}}>
+             <h1 className="text-headline article-title">{selectedEntry.title}</h1>
+             <div className="article-meta">
                <p className="text-caption">{new Date(selectedEntry.timestamp).toLocaleString()}</p>
                {selectedEntry.priority && (
-                 <span className={`meta-tag ${selectedEntry.priority === 'high' ? 's-blocked' : selectedEntry.priority === 'low' ? 's-review' : 's-active'}`} style={{
-                   display: 'inline-flex',
-                   alignItems: 'center',
-                   gap: '4px',
-                   fontSize: '0.6875rem',
-                   fontWeight: 500,
-                   borderRadius: '6px',
-                   padding: '4px 8px',
-                   fontFamily: 'Geist Mono, monospace'
-                 }}>
-                   <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'currentColor' }}></span>
+                 <span className={`meta-tag priority-badge ${selectedEntry.priority === 'high' ? 's-blocked' : selectedEntry.priority === 'low' ? 's-review' : 's-active'}`}>
+                   <span className="priority-dot"></span>
                    {selectedEntry.priority.charAt(0).toUpperCase() + selectedEntry.priority.slice(1)}
                  </span>
                )}
@@ -1091,36 +1023,18 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                const progressColor = progress < 50 ? '#10b981' : progress < 75 ? '#f59e0b' : progress < 100 ? '#f97316' : '#ef4444';
                
                return (
-                 <div style={{
-                   padding: '16px',
-                   background: 'var(--bg-surface)',
-                   borderRadius: 'var(--radius-md)',
-                   border: '1px solid var(--border)',
-                   marginBottom: '24px'
-                 }}>
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                     <span style={{ fontSize: '0.75rem', fontFamily: 'Geist Mono, monospace', color: isOverdue ? '#ff7043' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                       <Icon name="history" style={{ fontSize: '14px' }} />
+                 <div className="progress-container">
+                   <div className="progress-header">
+                     <span className={`progress-date ${isOverdue ? 'overdue' : ''}`}>
+                       <Icon name="history" className="icon-xs" />
                        {isOverdue ? 'Overdue' : `Due ${new Date(selectedEntry.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                      </span>
-                     <span style={{ fontSize: '0.875rem', fontFamily: 'Geist Mono, monospace', color: progressColor, fontWeight: 600 }}>
+                     <span className="progress-percent" style={{ color: progressColor }}>
                        {Math.round(progress)}%
                      </span>
                    </div>
-                   <div style={{ 
-                     width: '100%', 
-                     height: '8px', 
-                     background: 'var(--bg-app)', 
-                     borderRadius: '4px',
-                     overflow: 'hidden'
-                   }}>
-                     <div style={{ 
-                       width: `${progress}%`, 
-                       height: '100%', 
-                       background: progressColor,
-                       transition: 'width 0.3s ease',
-                       borderRadius: '4px'
-                     }} />
+                   <div className="progress-bar-bg">
+                     <div className="progress-bar-fill" style={{ width: `${progress}%`, background: progressColor }} />
                    </div>
                  </div>
                );
@@ -1132,31 +1046,15 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
              
              {/* Action Steps Display */}
              {selectedEntry.steps && selectedEntry.steps.length > 0 && (
-               <div style={{
-                 marginTop: '30px',
-                 padding: '20px',
-                 background: 'var(--bg-surface)',
-                 borderRadius: 'var(--radius-lg)',
-                 border: '1px solid var(--border)'
-               }}>
-                 <h3 className="text-title" style={{
-                   fontSize: '1rem',
-                   marginBottom: '16px',
-                   display: 'flex',
-                   alignItems: 'center',
-                   gap: '8px'
-                 }}>
-                   <Icon name="list" style={{fontSize: '18px', color: 'var(--accent-color)'}} />
+               <div className="steps-container">
+                 <h3 className="text-title steps-header">
+                   <Icon name="list" className="icon-md icon-accent" />
                    Action Steps
-                   <span className="text-caption" style={{
-                     marginLeft: 'auto',
-                     opacity: 0.7,
-                     fontSize: '0.8rem'
-                   }}>
+                   <span className="text-caption steps-count">
                      {selectedEntry.steps.filter(s => s.completed).length} / {selectedEntry.steps.length} completed
                    </span>
                  </h3>
-                 <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                 <div className="steps-list">
                    {selectedEntry.steps.map((step, idx) => (
                      <div 
                        key={idx} 
@@ -1170,45 +1068,13 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                          setEditedSteps(updatedSteps);
                          await api.updateEntry(currentUser.username, updated);
                        }}
-                       style={{
-                         display: 'flex',
-                         alignItems: 'flex-start',
-                         gap: '12px',
-                         padding: '12px',
-                         background: step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)',
-                         borderRadius: 'var(--radius-md)',
-                         border: '1px solid var(--border)',
-                         cursor: 'pointer',
-                         transition: 'all 0.2s ease',
-                         opacity: 0.9
-                       }}
-                       onMouseEnter={(e) => {
-                         (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--bg-surface)';
-                         (e.currentTarget as HTMLElement).style.opacity = '1';
-                       }}
-                       onMouseLeave={(e) => {
-                         (e.currentTarget as HTMLElement).style.background = step.completed ? 'rgba(var(--accent-rgb), 0.05)' : 'var(--bg-app)';
-                         (e.currentTarget as HTMLElement).style.opacity = '0.9';
-                       }}
+                       className={`step-item ${step.completed ? 'completed' : ''}`}
                      >
                        <Icon 
                          name={step.completed ? "checkCircle" : "radioButtonUnchecked"} 
-                         style={{
-                           fontSize: '20px',
-                           color: step.completed ? 'var(--accent-color)' : 'var(--text-secondary)',
-                           marginTop: '2px',
-                           flexShrink: 0,
-                           transition: 'color 0.2s ease'
-                         }}
+                         className={`step-icon ${step.completed ? 'completed' : ''}`}
                        />
-                       <span style={{
-                         flex: 1,
-                         textDecoration: step.completed ? 'line-through' : 'none',
-                         opacity: step.completed ? 0.7 : 1,
-                         fontSize: '0.95rem',
-                         lineHeight: 1.5,
-                         transition: 'all 0.2s ease'
-                       }}>
+                       <span className={`step-text ${step.completed ? 'completed' : ''}`}>
                          {step.text}
                        </span>
                      </div>
@@ -1218,27 +1084,17 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
              )}
              
              {/* Action Buttons & Mark as Done Button */}
-             <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
+             <div className="article-actions">
                <button 
                  onClick={() => setShowElaborateModal(true)}
-                 className="btn btn-primary"
-                 style={{display: 'inline-flex', alignItems: 'center', gap: '8px'}}
+                 className="btn btn-primary elaborate-btn"
                >
                  <Icon name="lightbulb" /> Elaborate Goal
                </button>
                {selectedEntry.steps && selectedEntry.steps.length > 0 && selectedEntry.steps.some(s => !s.completed) && (
                  <button 
                    onClick={handleMarkDone}
-                   className="btn"
-                   style={{
-                     display: 'inline-flex', 
-                     alignItems: 'center', 
-                     gap: '8px',
-                     background: 'rgba(16, 185, 129, 0.1)',
-                     color: '#10b981',
-                     border: '1px solid #10b981',
-                     marginLeft: 'auto'
-                   }}
+                   className="btn mark-done-btn"
                  >
                    <Icon name="check" /> Mark as Done
                  </button>
@@ -1262,18 +1118,18 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         
         {showNotifications && (
             <div className="modal-overlay" onClick={() => setShowNotifications(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '500px', maxHeight: '80vh'}}>
+                <div className="modal-content modal-content-md modal-body-80vh" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">AI Suggestions</h2>
-                        <button onClick={() => setShowNotifications(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowNotifications(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
-                    <div className="modal-body" style={{maxHeight: '60vh', overflowY: 'auto'}}>
+                    <div className="modal-body modal-body-scroll">
                         {notifications.length === 0 ? (
-                            <p className="text-body" style={{textAlign: 'center', padding: '2rem', opacity: 0.6}}>No new suggestions.</p>
+                            <p className="text-body modal-notification-empty">No new suggestions.</p>
                         ) : (
-                            <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                            <div className="notifications-list">
                                 {notifications.map(notif => (
-                                    <div key={notif.id} className="card" style={{padding: '16px'}}>
+                                    <div key={notif.id} className="card notification-card">
                                         <p className="text-body">{notif.text}</p>
                                     </div>
                                 ))}
@@ -1286,13 +1142,13 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         
         {showAiEditInput && (
             <div className="modal-overlay" onClick={() => setShowAiEditInput(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '500px'}}>
+                <div className="modal-content modal-content-md" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">AI Magic Edit</h2>
-                        <button onClick={() => setShowAiEditInput(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowAiEditInput(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
-                        <p className="text-body" style={{marginBottom: '1rem', opacity: 0.8}}>Tell AI how to transform your content:</p>
+                        <p className="text-body modal-text-muted">Tell AI how to transform your content:</p>
                         <input 
                             type="text" 
                             placeholder="e.g. 'Fix grammar', 'Make it shorter', 'Add more details'" 
@@ -1316,13 +1172,13 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         {/* Create Note Modal */}
         {isCreateNoteModalOpen && (
             <div className="modal-overlay" onClick={() => setIsCreateNoteModalOpen(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+                <div className="modal-content modal-content-lg" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">Create Note</h2>
-                        <button onClick={() => setIsCreateNoteModalOpen(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setIsCreateNoteModalOpen(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                        <div className="form-vertical-stack">
                             <div className="material-input-group" style={{marginBottom: 0}}>
                                 <label className="form-label">Title</label>
                                 <input 
@@ -1334,8 +1190,8 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                                 />
                             </div>
                             
-                            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
-                                <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 200px'}}>
+                            <div className="form-flex-row">
+                                <div className="material-input-group form-col-grow">
                                     <label className="form-label">Due Date *</label>
                                     <input 
                                         type="date"
@@ -1344,14 +1200,16 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                                         onChange={(e) => setNewNoteDueDate(e.target.value)}
                                         min={new Date().toISOString().split('T')[0]}
                                         required
+                                        title="Select due date"
                                     />
                                 </div>
-                                <div className="material-input-group" style={{marginBottom: 0, flex: '1 1 150px'}}>
+                                <div className="material-input-group form-col-fixed">
                                     <label className="form-label">Priority</label>
                                     <select 
                                         className="form-input" 
                                         value={newNotePriority} 
                                         onChange={(e) => setNewNotePriority(e.target.value as 'low' | 'medium' | 'high')}
+                                        title="Select priority level"
                                     >
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
@@ -1363,29 +1221,22 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                             <div className="material-input-group" style={{marginBottom: 0, position: 'relative'}}>
                                 <label className="form-label">Content</label>
                                 <textarea 
-                                    className="form-input" 
+                                    className="form-input textarea-resizable"
                                     placeholder="Enter your note content..." 
                                     value={newNoteContent} 
-                                    onChange={(e) => setNewNoteContent(e.target.value)} 
-                                    style={{ minHeight: '200px', resize: 'vertical', fontFamily: 'inherit', paddingBottom: '50px' }}
+                                    onChange={(e) => setNewNoteContent(e.target.value)}
+                                    style={{ minHeight: '200px', paddingBottom: '50px' }}
                                 />
                                 <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {isEnhancingModal && <span className="text-caption" style={{ color: 'var(--accent-color)', fontSize: '0.8rem' }}>Enhancing...</span>}
+                                    {isEnhancingModal && <span className="text-caption enhancing-status">Enhancing...</span>}
                                     <button 
                                         onClick={handleEnhanceModalNote}
-                                        className="btn-icon"
+                                        className={`btn-icon enhance-btn ${isEnhancingModal ? 'active' : ''}`}
                                         disabled={!newNoteContent.trim() || isEnhancingModal}
-                                        style={{
-                                            background: isEnhancingModal ? 'rgba(var(--accent-rgb), 0.15)' : 'var(--bg-surface)',
-                                            border: '1px solid var(--border)',
-                                            width: '36px',
-                                            height: '36px',
-                                            borderRadius: '50%',
-                                            color: 'var(--accent-color)'
-                                        }}
+                                        style={{ width: '36px', height: '36px' }}
                                         title="Enhance with AI"
                                     >
-                                        <Icon name={isEnhancingModal ? "autorenew" : "analytics"} className={isEnhancingModal ? "spin" : ""} style={{ fontSize: '16px' }} />
+                                        <Icon name={isEnhancingModal ? "autorenew" : "analytics"} className={`icon-sm ${isEnhancingModal ? "spin" : ""}`} />
                                     </button>
                                 </div>
                             </div>
@@ -1419,7 +1270,7 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
                     <div className="modal-header">
                         <h2 className="text-headline">Quick Save</h2>
-                        <button onClick={() => setShowDueDateReminder(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowDueDateReminder(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
                         <div style={{textAlign: 'center', padding: '1rem 0'}}>
@@ -1441,15 +1292,15 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && entryToDelete && (
             <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
+                <div className="modal-content modal-content-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">Delete Note</h2>
-                        <button onClick={() => setShowDeleteConfirm(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowDeleteConfirm(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
-                        <div style={{textAlign: 'center', padding: '1rem 0'}}>
-                            <Icon name="delete" style={{fontSize: '48px', color: '#EF4444', marginBottom: '12px'}} />
-                            <p className="text-body" style={{marginBottom: '8px', fontSize: '1rem'}}>Are you sure you want to delete this note?</p>
+                        <div className="modal-text-center">
+                            <Icon name="delete" className="modal-icon-large" style={{color: '#EF4444'}} />
+                            <p className="text-body" style={{marginBottom: '8px'}}>Are you sure you want to delete this note?</p>
                             <p className="text-caption" style={{opacity: 0.8, fontWeight: 600, marginBottom: '4px'}}>{entryToDelete.title}</p>
                             <p className="text-caption" style={{opacity: 0.6}}>This action cannot be undone.</p>
                         </div>
@@ -1468,7 +1319,7 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px', maxHeight: '80vh'}}>
                     <div className="modal-header">
                         <h2 className="text-headline">Refine: {selectedEntry.title}</h2>
-                        <button onClick={() => setShowRefineModal(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowRefineModal(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body" style={{maxHeight: '50vh', overflowY: 'auto', padding: '20px'}}>
                         {/* Conversation Thread */}
@@ -1561,6 +1412,7 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                                 onClick={handleRefineMessage}
                                 disabled={isRefining || !refineInput.trim()}
                                 className="btn-icon"
+                                title="Send message"
                                 style={{
                                     background: 'var(--accent-color)',
                                     color: '#fff',
@@ -1595,26 +1447,22 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         {/* Custom Alert Modal */}
         {alertModal.show && (
             <div className="modal-overlay" onClick={() => setAlertModal({...alertModal, show: false})}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
+                <div className="modal-content modal-content-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">{alertModal.title}</h2>
-                        <button onClick={() => setAlertModal({...alertModal, show: false})} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setAlertModal({...alertModal, show: false})} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
-                        <div style={{textAlign: 'center', padding: '1rem 0'}}>
+                        <div className="modal-text-center">
                             <Icon 
                                 name={alertModal.type === 'error' ? 'warning' : alertModal.type === 'success' ? 'check' : 'cloudOff'} 
-                                style={{
-                                    fontSize: '48px', 
-                                    color: alertModal.type === 'error' ? '#EF4444' : alertModal.type === 'success' ? '#10b981' : 'var(--accent-color)', 
-                                    marginBottom: '12px'
-                                }} 
+                                className={`alert-icon ${alertModal.type}`}
                             />
-                            <p className="text-body" style={{fontSize: '0.95rem', lineHeight: 1.5}}>{alertModal.message}</p>
+                            <p className="text-body alert-message">{alertModal.message}</p>
                         </div>
                     </div>
                     <div className="modal-footer">
-                        <button onClick={() => setAlertModal({...alertModal, show: false})} className="btn btn-primary" style={{width: '100%'}}>
+                        <button onClick={() => setAlertModal({...alertModal, show: false})} className="btn btn-primary full-width-btn">
                             OK
                         </button>
                     </div>
@@ -1625,15 +1473,15 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         {/* Logout Confirmation Modal */}
         {showLogoutConfirm && (
             <div className="modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
+                <div className="modal-content modal-content-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">Logout</h2>
-                        <button onClick={() => setShowLogoutConfirm(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowLogoutConfirm(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
-                        <div style={{textAlign: 'center', padding: '1rem 0'}}>
-                            <Icon name="logout" style={{fontSize: '48px', color: 'var(--accent-color)', marginBottom: '12px'}} />
-                            <p className="text-body" style={{fontSize: '1rem'}}>Are you sure you want to logout?</p>
+                        <div className="modal-text-center">
+                            <Icon name="logout" className="modal-icon-large icon-accent" />
+                            <p className="text-body">Are you sure you want to logout?</p>
                         </div>
                     </div>
                     <div className="modal-footer">
@@ -1650,16 +1498,16 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
         {/* Add Step Modal */}
         {showStepsModal && (
             <div className="modal-overlay" onClick={() => setShowStepsModal(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '500px'}}>
+                <div className="modal-content modal-content-md" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="text-headline">Add Action Step</h2>
-                        <button onClick={() => setShowStepsModal(false)} className="btn-icon"><Icon name="x" /></button>
+                        <button onClick={() => setShowStepsModal(false)} className="btn-icon" title="Close"><Icon name="x" /></button>
                     </div>
                     <div className="modal-body">
                         <div className="material-input-group">
                             <label className="form-label">Step Description</label>
                             <textarea 
-                                className="form-input"
+                                className="form-input textarea-resizable"
                                 placeholder="e.g., Research top 3 competitors in the market"
                                 value={stepsInput}
                                 onChange={(e) => setStepsInput(e.target.value)}
@@ -1672,9 +1520,8 @@ Provide a helpful, concise response that helps clarify the goal and suggests act
                                 }}
                                 rows={3}
                                 autoFocus
-                                style={{resize: 'vertical'}}
                             />
-                            <p className="text-caption" style={{marginTop: '6px', opacity: 0.7, fontSize: '0.8rem'}}>
+                            <p className="text-caption form-helper-text">
                                 Press Enter to add, Shift+Enter for new line
                             </p>
                         </div>

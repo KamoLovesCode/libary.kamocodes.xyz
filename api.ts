@@ -7,8 +7,10 @@ class HttpApiService {
     private baseUrl: string;
 
     constructor() {
-        // Use environment variable or default to localhost
-        this.baseUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001';
+        // Same-origin by default (works on Render when API and frontend are served together).
+        // Optional override via VITE_API_URL for split deployments.
+        const configuredBase = (import.meta.env.VITE_API_URL as string) || '';
+        this.baseUrl = configuredBase.replace(/\/$/, '');
     }
 
     // --- Authentication ---

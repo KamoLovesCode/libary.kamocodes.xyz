@@ -8,6 +8,7 @@ require('dotenv').config({ quiet: true });
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
+const FRONTEND_DIST_DIR = path.resolve(__dirname, '..', 'dist');
 
 // Directory setup for JSON fallback
 const DATA_DIR = path.join(__dirname, 'data');
@@ -16,6 +17,9 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+
+// Serve frontend build when available (Render single-service deployment).
+app.use(express.static(FRONTEND_DIST_DIR));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -211,6 +215,21 @@ app.delete('/api/entries/:id', async (req, res) => {
         }
     } catch (e) {
         res.status(500).json({ error: { message: e.message } });
+    }
+});
+
+// SPA fallback for non-API routes (excluding static assets).
+app.get(/^(?!\/api\/|.*\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$).*/, async (_req, res) => {
+    try {
+        const indexPath = path.join(FRONTEND_DIST_DIR, 'index.html');
+        await fs.access(indexPath);
+        res.sendFile(indexPath);
+    } catch {
+        res.status(404).json({
+            error: {
+                message: 'Frontend build not found. Run `npm run build` from the project root before starting the server in production.'
+            }
+        });
     }
 });
 
