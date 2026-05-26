@@ -5,9 +5,6 @@ export interface ChatEntry {
   title: string;
   content: string;
   timestamp: number;
-  dueDate?: string; // ISO date string (optional)
-  priority?: 'low' | 'medium' | 'high';
-  steps?: Array<{text: string; completed: boolean}>; // Action steps checklist
 }
 
 export interface User {
