@@ -87,9 +87,19 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   useEffect(() => { loadData(); }, [currentUser.username]);
 
   // Apply Theme
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 0, 0';
+  };
+
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
-    const colorObj = ACCENT_COLORS.find(c => c.name === accentColor) || ACCENT_COLORS[0];
+    let colorObj = ACCENT_COLORS.find(c => c.name === accentColor);
+    if (!colorObj && accentColor.startsWith('#')) {
+      colorObj = { name: 'custom', hex: accentColor, rgb: hexToRgb(accentColor), variant: accentColor };
+    } else if (!colorObj) {
+      colorObj = ACCENT_COLORS[0];
+    }
     document.documentElement.style.setProperty('--accent-color', colorObj.hex);
     document.documentElement.style.setProperty('--accent-variant', colorObj.variant);
     document.documentElement.style.setProperty('--accent-rgb', colorObj.rgb);
@@ -470,7 +480,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
             {currentView === 'ARTICLE' && renderArticle()}
         </div>
         {renderNavbar()}
-        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentAccentColorName={accentColor} onAccentColorChange={(c) => setAccentColor(c.name)} theme={theme} onThemeChange={setTheme} />
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} currentAccentColorName={accentColor} onAccentColorChange={setAccentColor} theme={theme} onThemeChange={setTheme} />
         <Modal isOpen={isSummaryModalOpen} onClose={() => setIsSummaryModalOpen(false)} title="Summary" originalContent={quickPasteContent} summarizedContent={summaryContent} isSummarizing={isSummarizing} onApplySummary={handleApplySummary} onCancelSummary={() => setIsSummaryModalOpen(false)}><p>Loading...</p></Modal>
     </div>
   );

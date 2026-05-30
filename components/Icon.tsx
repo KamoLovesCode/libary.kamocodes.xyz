@@ -1,13 +1,13 @@
 import React from 'react';
 
-type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud';
+type IconName = 'plus' | 'bookOpen' | 'trash' | 'x' | 'externalLink' | 'chevronDown' | 'search' | 'check' | 'copy' | 'library' | 'add' | 'autorenew' | 'analytics' | 'home' | 'history' | 'person' | 'trending_up' | 'warning' | 'cloudUpload' | 'cloudDownload' | 'settings' | 'mic' | 'micOff' | 'lock' | 'logout' | 'arrowBack' | 'send' | 'notifications' | 'notificationsActive' | 'google' | 'download' | 'upload' | 'api' | 'sun' | 'moon' | 'cloudOff' | 'cloud' | string;
 
 interface IconProps extends React.HTMLAttributes<HTMLSpanElement> {
   name: IconName;
   className?: string;
 }
 
-const iconMap: Record<IconName, string> = {
+const iconMap: Record<string, string> = {
   plus: 'add',
   add: 'add',
   bookOpen: 'menu_book',
@@ -50,7 +50,7 @@ const iconMap: Record<IconName, string> = {
 const Icon: React.FC<IconProps> = ({ name, className = '', ...props }) => {
   return (
     <span className={`material-symbols-outlined ${className}`} {...props}>
-      {iconMap[name]}
+      {iconMap[name] || name}
     </span>
   );
 };

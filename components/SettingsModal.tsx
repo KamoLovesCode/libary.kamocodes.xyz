@@ -22,7 +22,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentAccentColorName: string;
-  onAccentColorChange: (color: AccentColor) => void;
+  onAccentColorChange: (colorNameOrHex: string) => void;
   theme: 'light' | 'dark';
   onThemeChange: (theme: 'light' | 'dark') => void;
 }
@@ -35,6 +35,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   theme,
   onThemeChange
 }) => {
+  const isCustomColor = currentAccentColorName.startsWith('#');
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings">
       
@@ -72,11 +74,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
       <div className="material-input-group" style={{marginBottom: 'var(--space-6)'}}>
         <label className="form-label">App Theme Color</label>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginTop: '4px' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginTop: '4px', alignItems: 'center' }}>
           {ACCENT_COLORS.map((color) => (
             <button
               key={color.name}
-              onClick={() => onAccentColorChange(color)}
+              onClick={() => onAccentColorChange(color.name)}
               style={{
                 width: '40px',
                 height: '40px',
@@ -98,6 +100,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
             </button>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+             <input type="color" 
+                 value={isCustomColor ? currentAccentColorName : '#ffffff'} 
+                 onChange={(e) => onAccentColorChange(e.target.value)} 
+                 style={{ 
+                     width: '40px', height: '40px', padding: 0, border: 'none', 
+                     borderRadius: '50%', cursor: 'pointer', 
+                     opacity: 0, position: 'absolute', zIndex: 2
+                 }} 
+             />
+             <div style={{
+                 width: '40px', height: '40px', borderRadius: '50%',
+                 background: isCustomColor ? currentAccentColorName : 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)',
+                 border: `2px solid ${isCustomColor ? 'var(--bg-surface)' : 'transparent'}`,
+                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                 boxShadow: isCustomColor ? '0 0 0 2px var(--accent-color)' : 'none',
+                 transform: isCustomColor ? 'scale(1.1)' : 'scale(1)',
+             }}>
+                 {isCustomColor && <Icon name="check" style={{ color: '#fff' }} />}
+             </div>
+          </div>
         </div>
       </div>
       
